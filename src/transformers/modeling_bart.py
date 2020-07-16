@@ -424,8 +424,6 @@ class DecoderLayer(nn.Module):
         assert self.encoder_attn.cache_key != self.self_attn.cache_key
         if self.normalize_before:
             x = self.encoder_attn_layer_norm(x)
-        print(f"x shape: {x.shape} - encoder hidden states shape: {encoder_hidden_states.shape}")
-        print(f"encoder_attn_mask {encoder_attn_mask}")
         x, _ = self.encoder_attn(
             query=x,
             key=encoder_hidden_states,
@@ -657,17 +655,6 @@ class SelfAttention(nn.Module):
             saved_state = None
             layer_state = {}
 
-        print(
-            f"""
-            query: {query.shape}
-            key: {key.shape}
-            key_padding_mask: {key_padding_mask}
-            layer_state: {layer_state}
-            attn_mask: {attn_mask}
-            output_attentions: {output_attentions}
-            """
-        )
-
         q = self.q_proj(query) * self.scaling
         if static_kv:
             if key is None:
@@ -688,15 +675,6 @@ class SelfAttention(nn.Module):
         if saved_state is not None:
             k, v, key_padding_mask = self._use_saved_state(k, v, saved_state, key_padding_mask, static_kv, bsz)
 
-        print(
-            f"""
-            q: {q.shape}
-            k: {k.shape}
-            v: {v.shape}
-            key_padding_mask: {key_padding_mask}
-            """
-        )
-
         # Update cache
         layer_state[self.cache_key] = {
             "prev_key": k.view(bsz, self.num_heads, -1, self.head_dim),
@@ -709,13 +687,9 @@ class SelfAttention(nn.Module):
         attn_weights = torch.bmm(q, k.transpose(1, 2))
         assert attn_weights.size() == (bsz * self.num_heads, tgt_len, src_len)
 
-        print(f"attn_weights: {attn_weights[0]}")
-
         if attn_mask is not None:
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attn_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
-
-        print(f"attn_weights after attn_mask: {attn_weights[0]}")
 
         # This is part of a workaround to get around fork/join parallelism not supporting Optional types.
         if key_padding_mask is not None and key_padding_mask.dim() == 0:
@@ -729,8 +703,6 @@ class SelfAttention(nn.Module):
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
         attn_weights = F.softmax(attn_weights, dim=-1)
         attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training,)
-
-        print(f"attn_weights after key_padding_mask: {attn_weights[0]}")
 
         assert v is not None
         attn_output = torch.bmm(attn_probs, v)
@@ -773,6 +745,123 @@ class SelfAttention(nn.Module):
         else:
             new_key_padding_mask = key_padding_mask
         return k, v, new_key_padding_mask
+    
+class BartPointerHead(nn.Module):
+    """Head for pointer ordering task."""
+
+    def __init__(
+        self,
+        embed_dim,
+        num_heads,
+        dropout=0.0,
+        bias=True,
+    ):
+        super().__init__()
+        self.embed_dim = embed_dim
+        self.num_heads = num_heads
+        self.dropout = dropout
+        self.head_dim = embed_dim // num_heads
+        assert self.head_dim * num_heads == self.embed_dim, "embed_dim must be divisible by num_heads"
+        self.scaling = self.head_dim ** -0.5
+
+        self.encoder_decoder_attention = encoder_decoder_attention
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.cache_key = "encoder_decoder"
+
+    def _shape(self, tensor, seq_len, bsz):
+        return tensor.contiguous().view(seq_len, bsz * self.num_heads, self.head_dim).transpose(0, 1)
+
+    def forward(
+        self,
+        query,
+        key: Optional[Tensor],
+        key_padding_mask: Optional[Tensor] = None,
+        layer_state: Optional[Dict[str, Optional[Tensor]]] = None,
+        attn_mask: Optional[Tensor] = None,
+    ) -> Tuple[Tensor, Optional[Tensor]]:
+        """Input shape: Time(SeqLen) x Batch x Channel"""
+        static_kv: bool = self.encoder_decoder_attention
+        tgt_len, bsz, embed_dim = query.size()
+        assert embed_dim == self.embed_dim
+        assert list(query.size()) == [tgt_len, bsz, embed_dim]
+        # get here for encoder decoder cause of static_kv
+        if layer_state is not None:  # reuse k,v and encoder_padding_mask
+            saved_state = layer_state.get(self.cache_key, {})
+            if "prev_key" in saved_state and static_kv:
+                # previous time steps are cached - no need to recompute key and value if they are static
+                key = None
+        else:
+            saved_state = None
+            layer_state = {}
+
+        q = self.q_proj(query) * self.scaling
+        if static_kv:
+            if key is None:
+                k = None
+            else:
+                k = self.k_proj(key)
+        else:
+            k = self.k_proj(query)
+
+        q = self._shape(q, tgt_len, bsz)
+        if k is not None:
+            k = self._shape(k, -1, bsz)
+       
+        if saved_state is not None:
+            k, key_padding_mask = self._use_saved_state(k, saved_state, key_padding_mask, static_kv, bsz)
+
+        # Update cache
+        layer_state[self.cache_key] = {
+            "prev_key": k.view(bsz, self.num_heads, -1, self.head_dim),
+            "prev_key_padding_mask": key_padding_mask if not static_kv else None,
+        }
+
+        assert k is not None
+        src_len = k.size(1)
+        attn_weights = torch.bmm(q, k.transpose(1, 2))
+        assert attn_weights.size() == (bsz * self.num_heads, tgt_len, src_len)
+
+        if attn_mask is not None:
+            attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attn_mask
+            attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
+
+        # This is part of a workaround to get around fork/join parallelism not supporting Optional types.
+        if key_padding_mask is not None and key_padding_mask.dim() == 0:
+            key_padding_mask = None
+        assert key_padding_mask is None or key_padding_mask.size()[:2] == (bsz, src_len,)
+
+        if key_padding_mask is not None:  # don't attend to padding symbols
+            attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
+            reshaped = key_padding_mask.unsqueeze(1).unsqueeze(2)
+            attn_weights = attn_weights.masked_fill(reshaped, float("-inf"))
+            attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
+            
+        attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
+        return attn_weights
+
+    def _use_saved_state(self, k, saved_state, key_padding_mask, static_kv, bsz):
+        # saved states are stored with shape (bsz, num_heads, seq_len, head_dim)
+        if "prev_key" in saved_state:
+            _prev_key = saved_state["prev_key"]
+            assert _prev_key is not None
+            prev_key = _prev_key.view(bsz * self.num_heads, -1, self.head_dim)
+            if static_kv:
+                k = prev_key
+            else:
+                assert k is not None
+                k = torch.cat([prev_key, k], dim=1)
+        assert k is not None
+        prev_key_padding_mask: Optional[Tensor] = saved_state.get("prev_key_padding_mask", None)
+        if prev_key_padding_mask is not None:
+            if static_kv:
+                new_key_padding_mask = prev_key_padding_mask
+            else:
+                new_key_padding_mask = torch.cat([prev_key_padding_mask, key_padding_mask], dim=1)
+        else:
+            new_key_padding_mask = key_padding_mask
+        return k, new_key_padding_mask
 
 
 class BartClassificationHead(nn.Module):
@@ -1229,9 +1318,10 @@ class BartForTokenOrdering(PretrainedBartModel):
         super().__init__(config)
         self.model = BartModel(config)
         self.model.config.use_cache = True
-        self.ordering_attn = SelfAttention(
-            config.d_model, config.decoder_attention_heads, dropout=config.attention_dropout, encoder_decoder_attention=True,
+        self.pointer = BartPointerHead(
+            config.d_model, config.decoder_attention_heads, dropout=config.attention_dropout
         )
+        self.heads_combination = nn.Linear(config.decoder_attention_heads, 1)
 
     def forward(
         self,
@@ -1263,24 +1353,30 @@ class BartForTokenOrdering(PretrainedBartModel):
             return_tuple=return_tuple,
         )
         
-        print(f"Query shape: {outputs.encoder_last_hidden_state.shape}\nKey shape: {outputs.last_hidden_state.shape}")
-
-        attentions = self.ordering_attn(query=outputs.encoder_last_hidden_state.transpose(1, 0), key=outputs.last_hidden_state.transpose(1, 0), output_attentions=True)
-
-        return attentions, outputs
-
+        heads_logits = self.pointer(query=outputs.encoder_last_hidden_state.transpose(1, 0), key=outputs.last_hidden_state.transpose(1, 0), output_attentions=True)
+        logits = self.heads_combination(heads_logits.permute(0, 2, 3, 1)).squeeze()
+        
+        loss = None
         if labels is not None:
-            loss_fct = nn.CrossEntropyLoss()
-            # TODO(SS): do we need to ignore pad tokens in labels?
-            masked_lm_loss = loss_fct(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
+            loss_fct = CrossEntropyLoss()
+            # Only keep active parts of the loss
+            if attention_mask is not None:
+                active_loss = attention_mask.view(-1) == 1
+                active_logits = logits.view(-1, logits.size(-1))
+                active_labels = torch.where(
+                    active_loss, labels.view(-1), torch.tensor(loss_fct.ignore_index).type_as(labels)
+                )
+                loss = loss_fct(active_logits, active_labels)
+            else:
+                loss = loss_fct(logits.view(-1, logits.size(-1)), labels.view(-1))
 
         if return_tuple:
-            output = (lm_logits,) + outputs[1:]
-            return ((masked_lm_loss,) + output) if masked_lm_loss is not None else output
+            output = (logits,) + outputs[1:]
+            return ((loss,) + output) if loss is not None else output
 
-        return Seq2SeqLMOutput(
-            loss=masked_lm_loss,
-            logits=lm_logits,
+        return Seq2SeqTokenOrderingOutput(
+            loss=loss,
+            logits=logits,
             decoder_past_key_values=outputs.decoder_past_key_values,
             decoder_hidden_states=outputs.decoder_hidden_states,
             decoder_attentions=outputs.decoder_attentions,
