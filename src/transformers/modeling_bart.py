@@ -41,6 +41,7 @@ from .modeling_outputs import (
     Seq2SeqModelOutput,
     Seq2SeqQuestionAnsweringModelOutput,
     Seq2SeqSequenceClassifierOutput,
+    Seq2SeqTokenOrderingOutput,
 )
 from .modeling_utils import PreTrainedModel
 
@@ -764,6 +765,7 @@ class BartPointerHead(nn.Module):
         assert self.head_dim * num_heads == self.embed_dim, "embed_dim must be divisible by num_heads"
         self.scaling = self.head_dim ** -0.5
 
+        self.encoder_decoder_attention = True
         self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
         self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
         self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
@@ -1352,7 +1354,7 @@ class BartForTokenOrdering(PretrainedBartModel):
             return_tuple=return_tuple,
         )
         
-        heads_logits = self.pointer(query=outputs.encoder_last_hidden_state.transpose(1, 0), key=outputs.last_hidden_state.transpose(1, 0), output_attentions=True)
+        heads_logits = self.pointer(query=outputs.encoder_last_hidden_state.transpose(1, 0), key=outputs.last_hidden_state.transpose(1, 0))
         logits = self.heads_combination(heads_logits.permute(0, 2, 3, 1)).squeeze()
         
         loss = None
