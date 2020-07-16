@@ -424,6 +424,8 @@ class DecoderLayer(nn.Module):
         assert self.encoder_attn.cache_key != self.self_attn.cache_key
         if self.normalize_before:
             x = self.encoder_attn_layer_norm(x)
+        print(f"x shape: {x.shape} - encoder hidden states shape: {encoder_hidden_states.shape}")
+        print(f"encoder_attn_mask {encoder_attn_mask}")
         x, _ = self.encoder_attn(
             query=x,
             key=encoder_hidden_states,
@@ -655,6 +657,17 @@ class SelfAttention(nn.Module):
             saved_state = None
             layer_state = {}
 
+        print(
+            f"""
+            query: {query.shape}
+            key: {key.shape}
+            key_padding_mask: {key_padding_mask}
+            layer_state: {layer_state}
+            attn_mask: {attn_mask}
+            output_attentions: {output_attentions}
+            """
+        )
+
         q = self.q_proj(query) * self.scaling
         if static_kv:
             if key is None:
@@ -675,6 +688,15 @@ class SelfAttention(nn.Module):
         if saved_state is not None:
             k, v, key_padding_mask = self._use_saved_state(k, v, saved_state, key_padding_mask, static_kv, bsz)
 
+        print(
+            f"""
+            q: {q.shape}
+            k: {k.shape}
+            v: {v.shape}
+            key_padding_mask: {key_padding_mask}
+            """
+        )
+
         # Update cache
         layer_state[self.cache_key] = {
             "prev_key": k.view(bsz, self.num_heads, -1, self.head_dim),
@@ -687,9 +709,13 @@ class SelfAttention(nn.Module):
         attn_weights = torch.bmm(q, k.transpose(1, 2))
         assert attn_weights.size() == (bsz * self.num_heads, tgt_len, src_len)
 
+        print(f"attn_weights: {attn_weights[0]}")
+
         if attn_mask is not None:
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attn_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
+
+        print(f"attn_weights after attn_mask: {attn_weights[0]}")
 
         # This is part of a workaround to get around fork/join parallelism not supporting Optional types.
         if key_padding_mask is not None and key_padding_mask.dim() == 0:
@@ -703,6 +729,8 @@ class SelfAttention(nn.Module):
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
         attn_weights = F.softmax(attn_weights, dim=-1)
         attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training,)
+
+        print(f"attn_weights after key_padding_mask: {attn_weights[0]}")
 
         assert v is not None
         attn_output = torch.bmm(attn_probs, v)
@@ -1186,6 +1214,73 @@ class BartForSequenceClassification(PretrainedBartModel):
         return Seq2SeqSequenceClassifierOutput(
             loss=loss,
             logits=logits,
+            decoder_past_key_values=outputs.decoder_past_key_values,
+            decoder_hidden_states=outputs.decoder_hidden_states,
+            decoder_attentions=outputs.decoder_attentions,
+            encoder_last_hidden_state=outputs.encoder_last_hidden_state,
+            encoder_hidden_states=outputs.encoder_hidden_states,
+            encoder_attentions=outputs.encoder_attentions,
+        )
+
+class BartForTokenOrdering(PretrainedBartModel):
+    base_model_prefix = "model"
+
+    def __init__(self, config: BartConfig):
+        super().__init__(config)
+        self.model = BartModel(config)
+        self.model.config.use_cache = True
+        self.ordering_attn = SelfAttention(
+            config.d_model, config.decoder_attention_heads, dropout=config.attention_dropout, encoder_decoder_attention=True,
+        )
+
+    def forward(
+        self,
+        input_ids,
+        attention_mask=None,
+        encoder_outputs=None,
+        decoder_input_ids=None,
+        decoder_attention_mask=None,
+        decoder_past_key_values=None,
+        labels=None,
+        use_cache=None,
+        output_attentions=None,
+        output_hidden_states=None,
+        return_tuple=None,
+    ):
+        if labels is not None:
+            use_cache = False
+
+        outputs = self.model(
+            input_ids,
+            attention_mask=attention_mask,
+            decoder_input_ids=decoder_input_ids,
+            encoder_outputs=encoder_outputs,
+            decoder_attention_mask=decoder_attention_mask,
+            decoder_past_key_values=decoder_past_key_values,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_tuple=return_tuple,
+        )
+        
+        print(f"Query shape: {outputs.encoder_last_hidden_state.shape}\nKey shape: {outputs.last_hidden_state.shape}")
+
+        attentions = self.ordering_attn(query=outputs.encoder_last_hidden_state.transpose(1, 0), key=outputs.last_hidden_state.transpose(1, 0), output_attentions=True)
+
+        return attentions, outputs
+
+        if labels is not None:
+            loss_fct = nn.CrossEntropyLoss()
+            # TODO(SS): do we need to ignore pad tokens in labels?
+            masked_lm_loss = loss_fct(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
+
+        if return_tuple:
+            output = (lm_logits,) + outputs[1:]
+            return ((masked_lm_loss,) + output) if masked_lm_loss is not None else output
+
+        return Seq2SeqLMOutput(
+            loss=masked_lm_loss,
+            logits=lm_logits,
             decoder_past_key_values=outputs.decoder_past_key_values,
             decoder_hidden_states=outputs.decoder_hidden_states,
             decoder_attentions=outputs.decoder_attentions,
