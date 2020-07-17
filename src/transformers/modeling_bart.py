@@ -695,11 +695,8 @@ class SelfAttention(nn.Module):
         assert attn_weights.size() == (bsz * self.num_heads, tgt_len, src_len)
 
         if attn_mask is not None:
-            print("attn_mask:", attn_mask)
-            print("attn_weights:", attn_weights)
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attn_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
-            print("attn_weights:", attn_weights)
 
         # This is part of a workaround to get around fork/join parallelism not supporting Optional types.
         if key_padding_mask is not None and key_padding_mask.dim() == 0:
@@ -1325,7 +1322,6 @@ class BartForTokenOrdering(PretrainedBartModel):
     def __init__(self, config: BartConfig):
         super().__init__(config)
         self.model = BartModel(config)
-        self.model.config.use_cache = True
         self.pointer = BartPointerHead(
             config.d_model, config.decoder_attention_heads, dropout=config.attention_dropout,
         )
@@ -1361,7 +1357,7 @@ class BartForTokenOrdering(PretrainedBartModel):
             return_tuple=return_tuple,
         )
 
-        if decoder_attention_mask is not None:
+        if decoder_attention_mask is not None and use_cache:
             decoder_padding_mask = invert_mask(decoder_attention_mask)
         else:
             decoder_padding_mask = None
