@@ -689,8 +689,11 @@ class SelfAttention(nn.Module):
         assert attn_weights.size() == (bsz * self.num_heads, tgt_len, src_len)
 
         if attn_mask is not None:
+            print("attn_mask:", attn_mask)
+            print("attn_weights:", attn_weights)
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attn_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
+            print("attn_weights:", attn_weights)
 
         # This is part of a workaround to get around fork/join parallelism not supporting Optional types.
         if key_padding_mask is not None and key_padding_mask.dim() == 0:
@@ -1355,7 +1358,7 @@ class BartForTokenOrdering(PretrainedBartModel):
         )
         
         heads_logits = self.pointer(query=outputs.encoder_last_hidden_state.transpose(1, 0), key=outputs.last_hidden_state.transpose(1, 0))
-        logits = self.heads_combination(heads_logits.permute(0, 2, 3, 1)).squeeze()
+        logits = self.heads_combination(heads_logits.permute(0, 2, 3, 1)).squeeze(-1)
         
         loss = None
         if labels is not None:
