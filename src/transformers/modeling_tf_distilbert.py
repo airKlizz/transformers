@@ -92,7 +92,7 @@ class TFEmbeddings(tf.keras.layers.Layer):
         self.dim = config.dim
         self.initializer_range = config.initializer_range
         self.word_embeddings = TFSharedEmbeddings(
-            config.vocab_size, config.dim, initializer_range=config.initializer_range, name="word_embeddings"
+            config.vocab_size, config.dim, initializer_range=config.initializer_range, name="word_embeddings",
         )  # padding_idx=0)
         self.position_embeddings = tf.keras.layers.Embedding(
             config.max_position_embeddings,
@@ -110,7 +110,7 @@ class TFEmbeddings(tf.keras.layers.Layer):
             # Create and initialize weights. The random normal initializer was chosen
             # arbitrarily, and works well.
             self.word_embeddings = self.add_weight(
-                "weight", shape=[self.vocab_size, self.dim], initializer=get_initializer(self.initializer_range)
+                "weight", shape=[self.vocab_size, self.dim], initializer=get_initializer(self.initializer_range),
             )
         super().build(input_shape)
 
@@ -198,16 +198,16 @@ class TFMultiHeadSelfAttention(tf.keras.layers.Layer):
         assert self.dim % self.n_heads == 0
 
         self.q_lin = tf.keras.layers.Dense(
-            config.dim, kernel_initializer=get_initializer(config.initializer_range), name="q_lin"
+            config.dim, kernel_initializer=get_initializer(config.initializer_range), name="q_lin",
         )
         self.k_lin = tf.keras.layers.Dense(
-            config.dim, kernel_initializer=get_initializer(config.initializer_range), name="k_lin"
+            config.dim, kernel_initializer=get_initializer(config.initializer_range), name="k_lin",
         )
         self.v_lin = tf.keras.layers.Dense(
-            config.dim, kernel_initializer=get_initializer(config.initializer_range), name="v_lin"
+            config.dim, kernel_initializer=get_initializer(config.initializer_range), name="v_lin",
         )
         self.out_lin = tf.keras.layers.Dense(
-            config.dim, kernel_initializer=get_initializer(config.initializer_range), name="out_lin"
+            config.dim, kernel_initializer=get_initializer(config.initializer_range), name="out_lin",
         )
 
         self.pruned_heads = set()
@@ -247,7 +247,7 @@ class TFMultiHeadSelfAttention(tf.keras.layers.Layer):
 
         def unshape(x):
             """ group heads """
-            return tf.reshape(tf.transpose(x, perm=(0, 2, 1, 3)), (bs, -1, self.n_heads * dim_per_head))
+            return tf.reshape(tf.transpose(x, perm=(0, 2, 1, 3)), (bs, -1, self.n_heads * dim_per_head),)
 
         q = shape(self.q_lin(query))  # (bs, n_heads, q_length, dim_per_head)
         k = shape(self.k_lin(key))  # (bs, n_heads, k_length, dim_per_head)
@@ -281,12 +281,12 @@ class TFFFN(tf.keras.layers.Layer):
         super().__init__(**kwargs)
         self.dropout = tf.keras.layers.Dropout(config.dropout)
         self.lin1 = tf.keras.layers.Dense(
-            config.hidden_dim, kernel_initializer=get_initializer(config.initializer_range), name="lin1"
+            config.hidden_dim, kernel_initializer=get_initializer(config.initializer_range), name="lin1",
         )
         self.lin2 = tf.keras.layers.Dense(
-            config.dim, kernel_initializer=get_initializer(config.initializer_range), name="lin2"
+            config.dim, kernel_initializer=get_initializer(config.initializer_range), name="lin2",
         )
-        assert config.activation in ["relu", "gelu"], "activation ({}) must be in ['relu', 'gelu']".format(
+        assert config.activation in ["relu", "gelu",], "activation ({}) must be in ['relu', 'gelu']".format(
             config.activation
         )
         self.activation = (
@@ -338,7 +338,7 @@ class TFTransformerBlock(tf.keras.layers.Layer):
         # Self-Attention
         sa_output = self.attention([x, x, x, attn_mask, head_mask, output_attentions], training=training)
         if cast_bool_to_primitive(output_attentions) is True:
-            sa_output, sa_weights = sa_output  # (bs, seq_length, dim), (bs, n_heads, seq_length, seq_length)
+            (sa_output, sa_weights,) = sa_output  # (bs, seq_length, dim), (bs, n_heads, seq_length, seq_length)
         else:  # To handle these `output_attention` or `output_hidden_states` cases returning tuples
             # assert type(sa_output) == tuple
             sa_output = sa_output[0]
@@ -391,7 +391,9 @@ class TFTransformer(tf.keras.layers.Layer):
             if cast_bool_to_primitive(output_hidden_states) is True:
                 all_hidden_states = all_hidden_states + (hidden_state,)
 
-            layer_outputs = layer_module([hidden_state, attn_mask, head_mask[i], output_attentions], training=training)
+            layer_outputs = layer_module(
+                [hidden_state, attn_mask, head_mask[i], output_attentions], training=training,
+            )
             hidden_state = layer_outputs[-1]
 
             if cast_bool_to_primitive(output_attentions) is True:
@@ -493,7 +495,7 @@ class TFDistilBertMainLayer(tf.keras.layers.Layer):
 
         embedding_output = self.embeddings(input_ids, inputs_embeds=inputs_embeds)  # (bs, seq_length, dim)
         tfmr_output = self.transformer(
-            [embedding_output, attention_mask, head_mask, output_attentions, output_hidden_states], training=training
+            [embedding_output, attention_mask, head_mask, output_attentions, output_hidden_states,], training=training,
         )
 
         return tfmr_output  # last-layer hidden-state, (all hidden_states), (all attentions)
@@ -634,7 +636,7 @@ class TFDistilBertForMaskedLM(TFDistilBertPreTrainedModel, TFMaskedLanguageModel
 
         self.distilbert = TFDistilBertMainLayer(config, name="distilbert")
         self.vocab_transform = tf.keras.layers.Dense(
-            config.dim, kernel_initializer=get_initializer(config.initializer_range), name="vocab_transform"
+            config.dim, kernel_initializer=get_initializer(config.initializer_range), name="vocab_transform",
         )
         self.act = tf.keras.layers.Activation(gelu)
         self.vocab_layer_norm = tf.keras.layers.LayerNormalization(epsilon=1e-12, name="vocab_layer_norm")
@@ -729,7 +731,7 @@ class TFDistilBertForSequenceClassification(TFDistilBertPreTrainedModel, TFSeque
             name="pre_classifier",
         )
         self.classifier = tf.keras.layers.Dense(
-            config.num_labels, kernel_initializer=get_initializer(config.initializer_range), name="classifier"
+            config.num_labels, kernel_initializer=get_initializer(config.initializer_range), name="classifier",
         )
         self.dropout = tf.keras.layers.Dropout(config.seq_classif_dropout)
 
@@ -814,7 +816,7 @@ class TFDistilBertForTokenClassification(TFDistilBertPreTrainedModel, TFTokenCla
         self.distilbert = TFDistilBertMainLayer(config, name="distilbert")
         self.dropout = tf.keras.layers.Dropout(config.dropout)
         self.classifier = tf.keras.layers.Dense(
-            config.num_labels, kernel_initializer=get_initializer(config.initializer_range), name="classifier"
+            config.num_labels, kernel_initializer=get_initializer(config.initializer_range), name="classifier",
         )
 
     @add_start_docstrings_to_callable(DISTILBERT_INPUTS_DOCSTRING)
@@ -900,7 +902,7 @@ class TFDistilBertForMultipleChoice(TFDistilBertPreTrainedModel, TFMultipleChoic
             name="pre_classifier",
         )
         self.classifier = tf.keras.layers.Dense(
-            1, kernel_initializer=get_initializer(config.initializer_range), name="classifier"
+            1, kernel_initializer=get_initializer(config.initializer_range), name="classifier",
         )
 
     @property
@@ -1022,7 +1024,7 @@ class TFDistilBertForQuestionAnswering(TFDistilBertPreTrainedModel, TFQuestionAn
 
         self.distilbert = TFDistilBertMainLayer(config, name="distilbert")
         self.qa_outputs = tf.keras.layers.Dense(
-            config.num_labels, kernel_initializer=get_initializer(config.initializer_range), name="qa_outputs"
+            config.num_labels, kernel_initializer=get_initializer(config.initializer_range), name="qa_outputs",
         )
         assert config.num_labels == 2
         self.dropout = tf.keras.layers.Dropout(config.qa_dropout)

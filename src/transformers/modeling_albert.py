@@ -290,7 +290,7 @@ class AlbertLayer(nn.Module):
         self.activation = ACT2FN[config.hidden_act]
 
     def forward(
-        self, hidden_states, attention_mask=None, head_mask=None, output_attentions=False, output_hidden_states=False
+        self, hidden_states, attention_mask=None, head_mask=None, output_attentions=False, output_hidden_states=False,
     ):
         attention_output = self.attention(hidden_states, attention_mask, head_mask, output_attentions)
         ffn_output = self.ffn(attention_output[0])
@@ -308,7 +308,7 @@ class AlbertLayerGroup(nn.Module):
         self.albert_layers = nn.ModuleList([AlbertLayer(config) for _ in range(config.inner_group_num)])
 
     def forward(
-        self, hidden_states, attention_mask=None, head_mask=None, output_attentions=False, output_hidden_states=False
+        self, hidden_states, attention_mask=None, head_mask=None, output_attentions=False, output_hidden_states=False,
     ):
         layer_hidden_states = ()
         layer_attentions = ()
@@ -378,7 +378,7 @@ class AlbertTransformer(nn.Module):
         if return_tuple:
             return tuple(v for v in [hidden_states, all_hidden_states, all_attentions] if v is not None)
         return BaseModelOutput(
-            last_hidden_state=hidden_states, hidden_states=all_hidden_states, attentions=all_attentions
+            last_hidden_state=hidden_states, hidden_states=all_hidden_states, attentions=all_attentions,
         )
 
 
@@ -591,7 +591,7 @@ class AlbertModel(AlbertPreTrainedModel):
         head_mask = self.get_head_mask(head_mask, self.config.num_hidden_layers)
 
         embedding_output = self.embeddings(
-            input_ids, position_ids=position_ids, token_type_ids=token_type_ids, inputs_embeds=inputs_embeds
+            input_ids, position_ids=position_ids, token_type_ids=token_type_ids, inputs_embeds=inputs_embeds,
         )
         encoder_outputs = self.encoder(
             embedding_output,
@@ -808,7 +808,7 @@ class AlbertForMaskedLM(AlbertPreTrainedModel):
         output_attentions=None,
         output_hidden_states=None,
         return_tuple=None,
-        **kwargs
+        **kwargs,
     ):
         r"""
         labels (:obj:`torch.LongTensor` of shape :obj:`(batch_size, sequence_length)`, `optional`, defaults to :obj:`None`):

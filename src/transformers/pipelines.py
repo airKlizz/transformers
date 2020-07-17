@@ -666,7 +666,7 @@ class TextGenerationPipeline(Pipeline):
         return inputs
 
     def __call__(
-        self, *args, return_tensors=False, return_text=True, clean_up_tokenization_spaces=False, **generate_kwargs
+        self, *args, return_tensors=False, return_text=True, clean_up_tokenization_spaces=False, **generate_kwargs,
     ):
 
         text_inputs = self._args_parser(*args)
@@ -692,7 +692,7 @@ class TextGenerationPipeline(Pipeline):
                         generate_kwargs["min_length"] += padding_length
 
                     inputs = self._parse_and_tokenize(
-                        padding_text + prompt_text, padding=False, add_special_tokens=False
+                        padding_text + prompt_text, padding=False, add_special_tokens=False,
                     )
                 else:
                     inputs = self._parse_and_tokenize(prompt_text, padding=False, add_special_tokens=False)
@@ -811,7 +811,7 @@ class TextClassificationPipeline(Pipeline):
             ]
         else:
             return [
-                {"label": self.model.config.id2label[item.argmax()], "score": item.max().item()} for item in scores
+                {"label": self.model.config.id2label[item.argmax()], "score": item.max().item(),} for item in scores
             ]
 
 
@@ -1243,7 +1243,7 @@ class QuestionAnsweringPipeline(Pipeline):
         framework: Optional[str] = None,
         device: int = -1,
         task: str = "",
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             model=model,
@@ -1532,7 +1532,12 @@ class SummarizationPipeline(Pipeline):
         )
 
     def __call__(
-        self, *documents, return_tensors=False, return_text=True, clean_up_tokenization_spaces=False, **generate_kwargs
+        self,
+        *documents,
+        return_tensors=False,
+        return_text=True,
+        clean_up_tokenization_spaces=False,
+        **generate_kwargs,
     ):
         r"""
         Args:
@@ -1665,7 +1670,7 @@ class TranslationPipeline(Pipeline):
         self.check_model_type(TF_MODEL_WITH_LM_HEAD_MAPPING if self.framework == "tf" else MODEL_WITH_LM_HEAD_MAPPING)
 
     def __call__(
-        self, *args, return_tensors=False, return_text=True, clean_up_tokenization_spaces=False, **generate_kwargs
+        self, *args, return_tensors=False, return_text=True, clean_up_tokenization_spaces=False, **generate_kwargs,
     ):
         r"""
         Args:
@@ -1772,7 +1777,7 @@ SUPPORTED_TASKS = {
         "tf": TFAutoModelForQuestionAnswering if is_tf_available() else None,
         "pt": AutoModelForQuestionAnswering if is_torch_available() else None,
         "default": {
-            "model": {"pt": "distilbert-base-cased-distilled-squad", "tf": "distilbert-base-cased-distilled-squad"},
+            "model": {"pt": "distilbert-base-cased-distilled-squad", "tf": "distilbert-base-cased-distilled-squad",},
         },
     },
     "fill-mask": {
@@ -1820,7 +1825,7 @@ def pipeline(
     config: Optional[Union[str, PretrainedConfig]] = None,
     tokenizer: Optional[Union[str, PreTrainedTokenizer]] = None,
     framework: Optional[str] = None,
-    **kwargs
+    **kwargs,
 ) -> Pipeline:
     """
     Utility factory method to build a pipeline.
@@ -1956,4 +1961,4 @@ def pipeline(
             )
         model = model_class.from_pretrained(model, config=config, **model_kwargs)
 
-    return task_class(model=model, tokenizer=tokenizer, modelcard=modelcard, framework=framework, task=task, **kwargs)
+    return task_class(model=model, tokenizer=tokenizer, modelcard=modelcard, framework=framework, task=task, **kwargs,)

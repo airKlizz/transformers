@@ -156,7 +156,9 @@ class TFAttention(tf.keras.layers.Layer):
         else:
             present = (None,)
 
-        attn_outputs = self._attn([query, key, value, attention_mask, head_mask, output_attentions], training=training)
+        attn_outputs = self._attn(
+            [query, key, value, attention_mask, head_mask, output_attentions], training=training,
+        )
         a = attn_outputs[0]
 
         a = self.merge_heads(a)
@@ -197,7 +199,7 @@ class TFBlock(tf.keras.layers.Layer):
 
         a = self.ln_1(x)
         output_attn = self.attn(
-            [a, layer_past, attention_mask, head_mask, use_cache, output_attentions], training=training
+            [a, layer_past, attention_mask, head_mask, use_cache, output_attentions], training=training,
         )
         a = output_attn[0]  # output_attn: a, present, (attentions)
         x = x + a
@@ -225,7 +227,7 @@ class TFGPT2MainLayer(tf.keras.layers.Layer):
         self.n_embd = config.n_embd
 
         self.wte = TFSharedEmbeddings(
-            config.vocab_size, config.hidden_size, initializer_range=config.initializer_range, name="wte"
+            config.vocab_size, config.hidden_size, initializer_range=config.initializer_range, name="wte",
         )
         self.wpe = tf.keras.layers.Embedding(
             config.n_positions,
@@ -366,7 +368,7 @@ class TFGPT2MainLayer(tf.keras.layers.Layer):
                 all_hidden_states = all_hidden_states + (tf.reshape(hidden_states, output_shape),)
 
             outputs = block(
-                [hidden_states, layer_past, attention_mask, head_mask[i], use_cache, output_attentions],
+                [hidden_states, layer_past, attention_mask, head_mask[i], use_cache, output_attentions,],
                 training=training,
             )
 
@@ -632,7 +634,7 @@ class TFGPT2DoubleHeadsModel(TFGPT2PreTrainedModel):
         config.num_labels = 1
         self.transformer = TFGPT2MainLayer(config, name="transformer")
         self.multiple_choice_head = TFSequenceSummary(
-            config, initializer_range=config.initializer_range, name="multiple_choice_head"
+            config, initializer_range=config.initializer_range, name="multiple_choice_head",
         )
 
     def get_output_embeddings(self):

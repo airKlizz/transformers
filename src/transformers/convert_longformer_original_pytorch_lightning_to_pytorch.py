@@ -36,7 +36,7 @@ class LightningModel(pl.LightningModule):
 
 
 def convert_longformer_qa_checkpoint_to_pytorch(
-    longformer_model: str, longformer_question_answering_ckpt_path: str, pytorch_dump_folder_path: str
+    longformer_model: str, longformer_question_answering_ckpt_path: str, pytorch_dump_folder_path: str,
 ):
 
     # load longformer model from model identifier
@@ -78,9 +78,9 @@ if __name__ == "__main__":
         help="Path the official PyTorch Lighning Checkpoint.",
     )
     parser.add_argument(
-        "--pytorch_dump_folder_path", default=None, type=str, required=True, help="Path to the output PyTorch model."
+        "--pytorch_dump_folder_path", default=None, type=str, required=True, help="Path to the output PyTorch model.",
     )
     args = parser.parse_args()
     convert_longformer_qa_checkpoint_to_pytorch(
-        args.longformer_model, args.longformer_question_answering_ckpt_path, args.pytorch_dump_folder_path
+        args.longformer_model, args.longformer_question_answering_ckpt_path, args.pytorch_dump_folder_path,
     )

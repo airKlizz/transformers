@@ -82,7 +82,7 @@ class Embeddings(nn.Module):
         self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.dim)
         if config.sinusoidal_pos_embds:
             create_sinusoidal_embeddings(
-                n_pos=config.max_position_embeddings, dim=config.dim, out=self.position_embeddings.weight
+                n_pos=config.max_position_embeddings, dim=config.dim, out=self.position_embeddings.weight,
             )
 
         self.LayerNorm = nn.LayerNorm(config.dim, eps=1e-12)
@@ -210,7 +210,7 @@ class FFN(nn.Module):
         self.dropout = nn.Dropout(p=config.dropout)
         self.lin1 = nn.Linear(in_features=config.dim, out_features=config.hidden_dim)
         self.lin2 = nn.Linear(in_features=config.hidden_dim, out_features=config.dim)
-        assert config.activation in ["relu", "gelu"], "activation ({}) must be in ['relu', 'gelu']".format(
+        assert config.activation in ["relu", "gelu",], "activation ({}) must be in ['relu', 'gelu']".format(
             config.activation
         )
         self.activation = gelu if config.activation == "gelu" else nn.ReLU()
@@ -254,7 +254,7 @@ class TransformerBlock(nn.Module):
             query=x, key=x, value=x, mask=attn_mask, head_mask=head_mask, output_attentions=output_attentions,
         )
         if output_attentions:
-            sa_output, sa_weights = sa_output  # (bs, seq_length, dim), (bs, n_heads, seq_length, seq_length)
+            (sa_output, sa_weights,) = sa_output  # (bs, seq_length, dim), (bs, n_heads, seq_length, seq_length)
         else:  # To handle these `output_attention` or `output_hidden_states` cases returning tuples
             assert type(sa_output) == tuple
             sa_output = sa_output[0]
@@ -279,7 +279,13 @@ class Transformer(nn.Module):
         self.layer = nn.ModuleList([copy.deepcopy(layer) for _ in range(config.n_layers)])
 
     def forward(
-        self, x, attn_mask=None, head_mask=None, output_attentions=False, output_hidden_states=False, return_tuple=None
+        self,
+        x,
+        attn_mask=None,
+        head_mask=None,
+        output_attentions=False,
+        output_hidden_states=False,
+        return_tuple=None,
     ):
         """
         Parameters
@@ -309,7 +315,7 @@ class Transformer(nn.Module):
                 all_hidden_states = all_hidden_states + (hidden_state,)
 
             layer_outputs = layer_module(
-                x=hidden_state, attn_mask=attn_mask, head_mask=head_mask[i], output_attentions=output_attentions
+                x=hidden_state, attn_mask=attn_mask, head_mask=head_mask[i], output_attentions=output_attentions,
             )
             hidden_state = layer_outputs[-1]
 
@@ -327,7 +333,7 @@ class Transformer(nn.Module):
         if return_tuple:
             return tuple(v for v in [hidden_state, all_hidden_states, all_attentions] if v is not None)
         return BaseModelOutput(
-            last_hidden_state=hidden_state, hidden_states=all_hidden_states, attentions=all_attentions
+            last_hidden_state=hidden_state, hidden_states=all_hidden_states, attentions=all_attentions,
         )
 
 
@@ -517,7 +523,7 @@ class DistilBertForMaskedLM(DistilBertPreTrainedModel):
         output_attentions=None,
         output_hidden_states=None,
         return_tuple=None,
-        **kwargs
+        **kwargs,
     ):
         r"""
         labels (:obj:`torch.LongTensor` of shape :obj:`(batch_size, sequence_length)`, `optional`, defaults to :obj:`None`):
@@ -807,7 +813,7 @@ class DistilBertForTokenClassification(DistilBertPreTrainedModel):
                 active_loss = attention_mask.view(-1) == 1
                 active_logits = logits.view(-1, self.num_labels)
                 active_labels = torch.where(
-                    active_loss, labels.view(-1), torch.tensor(loss_fct.ignore_index).type_as(labels)
+                    active_loss, labels.view(-1), torch.tensor(loss_fct.ignore_index).type_as(labels),
                 )
                 loss = loss_fct(active_logits, active_labels)
             else:

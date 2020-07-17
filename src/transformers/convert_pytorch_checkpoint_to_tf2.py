@@ -185,7 +185,12 @@ MODEL_CLASSES = {
 
 
 def convert_pt_checkpoint_to_tf(
-    model_type, pytorch_checkpoint_path, config_file, tf_dump_path, compare_with_pt_model=False, use_cached_models=True
+    model_type,
+    pytorch_checkpoint_path,
+    config_file,
+    tf_dump_path,
+    compare_with_pt_model=False,
+    use_cached_models=True,
 ):
     if model_type not in MODEL_CLASSES:
         raise ValueError("Unrecognized model type, should be one of {}.".format(list(MODEL_CLASSES.keys())))
@@ -255,7 +260,7 @@ def convert_all_pt_checkpoints_to_tf(
                 "Unrecognized model type {}, should be one of {}.".format(model_type, list(MODEL_CLASSES.keys()))
             )
 
-        config_class, model_class, pt_model_class, aws_model_maps, aws_config_map = MODEL_CLASSES[model_type]
+        (config_class, model_class, pt_model_class, aws_model_maps, aws_config_map,) = MODEL_CLASSES[model_type]
 
         if model_shortcut_names_or_path is None:
             model_shortcut_names_or_path = list(aws_model_maps.keys())
@@ -282,12 +287,12 @@ def convert_all_pt_checkpoints_to_tf(
             print("-" * 100)
 
             if config_shortcut_name in aws_config_map:
-                config_file = cached_path(aws_config_map[config_shortcut_name], force_download=not use_cached_models)
+                config_file = cached_path(aws_config_map[config_shortcut_name], force_download=not use_cached_models,)
             else:
                 config_file = cached_path(config_shortcut_name, force_download=not use_cached_models)
 
             if model_shortcut_name in aws_model_maps:
-                model_file = cached_path(aws_model_maps[model_shortcut_name], force_download=not use_cached_models)
+                model_file = cached_path(aws_model_maps[model_shortcut_name], force_download=not use_cached_models,)
             else:
                 model_file = cached_path(model_shortcut_name, force_download=not use_cached_models)
 
@@ -310,7 +315,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # Required parameters
     parser.add_argument(
-        "--tf_dump_path", default=None, type=str, required=True, help="Path to the output Tensorflow dump file."
+        "--tf_dump_path", default=None, type=str, required=True, help="Path to the output Tensorflow dump file.",
     )
     parser.add_argument(
         "--model_type",
@@ -337,7 +342,7 @@ if __name__ == "__main__":
         "use the configuration associated to the shortcut name on the AWS",
     )
     parser.add_argument(
-        "--compare_with_pt_model", action="store_true", help="Compare Tensorflow and PyTorch model predictions."
+        "--compare_with_pt_model", action="store_true", help="Compare Tensorflow and PyTorch model predictions.",
     )
     parser.add_argument(
         "--use_cached_models",
@@ -349,7 +354,9 @@ if __name__ == "__main__":
         action="store_true",
         help="Remove pytorch models after conversion (save memory when converting in batches).",
     )
-    parser.add_argument("--only_convert_finetuned_models", action="store_true", help="Only convert finetuned models.")
+    parser.add_argument(
+        "--only_convert_finetuned_models", action="store_true", help="Only convert finetuned models.",
+    )
     args = parser.parse_args()
 
     # if args.pytorch_checkpoint_path is not None:

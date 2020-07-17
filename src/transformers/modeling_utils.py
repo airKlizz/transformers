@@ -232,7 +232,7 @@ class ModuleUtilsMixin:
         extended_attention_mask = (1.0 - extended_attention_mask) * -10000.0
         return extended_attention_mask
 
-    def get_head_mask(self, head_mask: Tensor, num_hidden_layers: int, is_attention_chunked: bool = False) -> Tensor:
+    def get_head_mask(self, head_mask: Tensor, num_hidden_layers: int, is_attention_chunked: bool = False,) -> Tensor:
         """
         # Prepare head mask if needed
         # 1.0 in head_mask indicate we keep the head
@@ -624,7 +624,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
                 else:
                     raise EnvironmentError(
                         "Error no file named {} found in directory {} or `from_tf` set to False".format(
-                            [WEIGHTS_NAME, TF2_WEIGHTS_NAME, TF_WEIGHTS_NAME + ".index"],
+                            [WEIGHTS_NAME, TF2_WEIGHTS_NAME, TF_WEIGHTS_NAME + ".index",],
                             pretrained_model_name_or_path,
                         )
                     )
@@ -1088,7 +1088,13 @@ class SQuADHead(nn.Module):
             cls_logits = self.answer_class(hidden_states, start_states=start_states, cls_index=cls_index)
 
             if return_tuple:
-                return (start_top_log_probs, start_top_index, end_top_log_probs, end_top_index, cls_logits)
+                return (
+                    start_top_log_probs,
+                    start_top_index,
+                    end_top_log_probs,
+                    end_top_index,
+                    cls_logits,
+                )
             else:
                 return SquadHeadOutput(
                     start_top_log_probs=start_top_log_probs,
@@ -1239,7 +1245,7 @@ def prune_layer(layer, index, dim=None):
 
 
 def apply_chunking_to_forward(
-    chunk_size: int, chunk_dim: int, forward_fn: Callable[..., torch.Tensor], *input_tensors
+    chunk_size: int, chunk_dim: int, forward_fn: Callable[..., torch.Tensor], *input_tensors,
 ) -> torch.Tensor:
     """
     This function chunks the `input_tensors` into smaller input tensor parts of size `chunk_size` over the dimension `chunk_dim`.

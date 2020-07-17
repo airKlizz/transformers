@@ -209,7 +209,7 @@ class AutoTokenizer:
             return BertJapaneseTokenizer.from_pretrained(pretrained_model_name_or_path, *inputs, **kwargs)
 
         use_fast = kwargs.pop("use_fast", False)
-        for config_class, (tokenizer_class_py, tokenizer_class_fast) in TOKENIZER_MAPPING.items():
+        for (config_class, (tokenizer_class_py, tokenizer_class_fast),) in TOKENIZER_MAPPING.items():
             if isinstance(config, config_class):
                 if tokenizer_class_fast and use_fast:
                     return tokenizer_class_fast.from_pretrained(pretrained_model_name_or_path, *inputs, **kwargs)
@@ -219,6 +219,6 @@ class AutoTokenizer:
         raise ValueError(
             "Unrecognized configuration class {} to build an AutoTokenizer.\n"
             "Model type should be one of {}.".format(
-                config.__class__, ", ".join(c.__name__ for c in TOKENIZER_MAPPING.keys())
+                config.__class__, ", ".join(c.__name__ for c in TOKENIZER_MAPPING.keys()),
             )
         )

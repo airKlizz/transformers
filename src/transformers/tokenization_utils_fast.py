@@ -284,7 +284,7 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
     def _batch_encode_plus(
         self,
         batch_text_or_text_pairs: Union[
-            List[TextInput], List[TextInputPair], List[PreTokenizedInput], List[PreTokenizedInputPair]
+            List[TextInput], List[TextInputPair], List[PreTokenizedInput], List[PreTokenizedInputPair],
         ],
         add_special_tokens: bool = True,
         padding_strategy: PaddingStrategy = PaddingStrategy.DO_NOT_PAD,
@@ -301,7 +301,7 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
         return_offsets_mapping: bool = False,
         return_length: bool = False,
         verbose: bool = True,
-        **kwargs
+        **kwargs,
     ) -> BatchEncoding:
 
         if not isinstance(batch_text_or_text_pairs, list):
@@ -340,7 +340,7 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
             encodings = [encodings]
         else:
             encodings = self._tokenizer.encode_batch(
-                batch_text_or_text_pairs, add_special_tokens=add_special_tokens, is_pretokenized=is_pretokenized
+                batch_text_or_text_pairs, add_special_tokens=add_special_tokens, is_pretokenized=is_pretokenized,
             )
 
         # Convert encoding to dict
@@ -396,7 +396,7 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
         return_offsets_mapping: bool = False,
         return_length: bool = False,
         verbose: bool = True,
-        **kwargs
+        **kwargs,
     ) -> BatchEncoding:
 
         batched_input = [(text, text_pair)] if text_pair else [text]
@@ -434,7 +434,7 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
         return batched_output
 
     def decode(
-        self, token_ids: List[int], skip_special_tokens: bool = False, clean_up_tokenization_spaces: bool = True
+        self, token_ids: List[int], skip_special_tokens: bool = False, clean_up_tokenization_spaces: bool = True,
     ) -> str:
         text = self._tokenizer.decode(token_ids, skip_special_tokens=skip_special_tokens)
 

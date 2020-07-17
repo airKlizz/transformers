@@ -91,7 +91,7 @@ def load_tf_weights_in_t5(model, config, tf_checkpoint_path):
         # adam_v and adam_m are variables used in AdamWeightDecayOptimizer to calculated m and v
         # which are not required for using pretrained model
         if any(
-            n in ["adam_v", "adam_m", "AdamWeightDecayOptimizer", "AdamWeightDecayOptimizer_1", "global_step"]
+            n in ["adam_v", "adam_m", "AdamWeightDecayOptimizer", "AdamWeightDecayOptimizer_1", "global_step",]
             for n in name
         ):
             logger.info("Skipping {}".format("/".join(name)))
@@ -722,7 +722,7 @@ class T5Stack(T5PreTrainedModel):
         if self.is_decoder and encoder_attention_mask is None and encoder_hidden_states is not None:
             encoder_seq_length = encoder_hidden_states.shape[1]
             encoder_attention_mask = torch.ones(
-                batch_size, encoder_seq_length, device=inputs_embeds.device, dtype=torch.long
+                batch_size, encoder_seq_length, device=inputs_embeds.device, dtype=torch.long,
             )
 
         # initialize past_key_value_states with `None` if past does not exist
@@ -790,7 +790,7 @@ class T5Stack(T5PreTrainedModel):
         if return_tuple:
             return tuple(
                 v
-                for v in [hidden_states, present_key_value_states, all_hidden_states, all_attentions]
+                for v in [hidden_states, present_key_value_states, all_hidden_states, all_attentions,]
                 if v is not None
             )
         return BaseModelOutputWithPast(

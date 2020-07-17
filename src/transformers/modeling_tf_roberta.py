@@ -240,7 +240,7 @@ class TFRobertaLMHead(tf.keras.layers.Layer):
         super().__init__(**kwargs)
         self.vocab_size = config.vocab_size
         self.dense = tf.keras.layers.Dense(
-            config.hidden_size, kernel_initializer=get_initializer(config.initializer_range), name="dense"
+            config.hidden_size, kernel_initializer=get_initializer(config.initializer_range), name="dense",
         )
         self.layer_norm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="layer_norm")
         self.act = tf.keras.layers.Activation(gelu)
@@ -264,7 +264,9 @@ class TFRobertaLMHead(tf.keras.layers.Layer):
         return x
 
 
-@add_start_docstrings("""RoBERTa Model with a `language modeling` head on top. """, ROBERTA_START_DOCSTRING)
+@add_start_docstrings(
+    """RoBERTa Model with a `language modeling` head on top. """, ROBERTA_START_DOCSTRING,
+)
 class TFRobertaForMaskedLM(TFRobertaPreTrainedModel, TFMaskedLanguageModelingLoss):
     def __init__(self, config, *inputs, **kwargs):
         super().__init__(config, *inputs, **kwargs)
@@ -359,7 +361,7 @@ class TFRobertaClassificationHead(tf.keras.layers.Layer):
         )
         self.dropout = tf.keras.layers.Dropout(config.hidden_dropout_prob)
         self.out_proj = tf.keras.layers.Dense(
-            config.num_labels, kernel_initializer=get_initializer(config.initializer_range), name="out_proj"
+            config.num_labels, kernel_initializer=get_initializer(config.initializer_range), name="out_proj",
         )
 
     def call(self, features, training=False):
@@ -459,7 +461,7 @@ class TFRobertaForMultipleChoice(TFRobertaPreTrainedModel, TFMultipleChoiceLoss)
         self.roberta = TFRobertaMainLayer(config, name="roberta")
         self.dropout = tf.keras.layers.Dropout(config.hidden_dropout_prob)
         self.classifier = tf.keras.layers.Dense(
-            1, kernel_initializer=get_initializer(config.initializer_range), name="classifier"
+            1, kernel_initializer=get_initializer(config.initializer_range), name="classifier",
         )
 
     @property
@@ -588,7 +590,7 @@ class TFRobertaForTokenClassification(TFRobertaPreTrainedModel, TFTokenClassific
         self.roberta = TFRobertaMainLayer(config, name="roberta")
         self.dropout = tf.keras.layers.Dropout(config.hidden_dropout_prob)
         self.classifier = tf.keras.layers.Dense(
-            config.num_labels, kernel_initializer=get_initializer(config.initializer_range), name="classifier"
+            config.num_labels, kernel_initializer=get_initializer(config.initializer_range), name="classifier",
         )
 
     @add_start_docstrings_to_callable(ROBERTA_INPUTS_DOCSTRING)
@@ -671,7 +673,7 @@ class TFRobertaForQuestionAnswering(TFRobertaPreTrainedModel, TFQuestionAnswerin
 
         self.roberta = TFRobertaMainLayer(config, name="roberta")
         self.qa_outputs = tf.keras.layers.Dense(
-            config.num_labels, kernel_initializer=get_initializer(config.initializer_range), name="qa_outputs"
+            config.num_labels, kernel_initializer=get_initializer(config.initializer_range), name="qa_outputs",
         )
 
     @add_start_docstrings_to_callable(ROBERTA_INPUTS_DOCSTRING)

@@ -239,7 +239,11 @@ class XLMPreTrainedModel(PreTrainedModel):
             langs_list = torch.tensor([[1, 1, 0, 0, 1], [1, 1, 1, 0, 0], [1, 0, 0, 1, 1]])
         else:
             langs_list = None
-        return {"input_ids": inputs_list, "attention_mask": attns_list, "langs": langs_list}
+        return {
+            "input_ids": inputs_list,
+            "attention_mask": attns_list,
+            "langs": langs_list,
+        }
 
     def _init_weights(self, module):
         """ Initialize the weights. """
@@ -410,7 +414,9 @@ class XLMModel(XLMPreTrainedModel):
         # embeddings
         self.position_embeddings = nn.Embedding(config.max_position_embeddings, self.dim)
         if config.sinusoidal_embeddings:
-            create_sinusoidal_embeddings(config.max_position_embeddings, self.dim, out=self.position_embeddings.weight)
+            create_sinusoidal_embeddings(
+                config.max_position_embeddings, self.dim, out=self.position_embeddings.weight,
+            )
         if config.n_langs > 1 and config.use_lang_emb:
             self.lang_embeddings = nn.Embedding(self.n_langs, self.dim)
         self.embeddings = nn.Embedding(self.n_words, self.dim, padding_idx=self.pad_index)
@@ -629,7 +635,7 @@ class XLMPredLayer(nn.Module):
             scores = self.proj(x)
             outputs = (scores,) + outputs
             if y is not None:
-                loss = F.cross_entropy(scores.view(-1, self.n_words), y.view(-1), reduction="elementwise_mean")
+                loss = F.cross_entropy(scores.view(-1, self.n_words), y.view(-1), reduction="elementwise_mean",)
                 outputs = (loss,) + outputs
         else:
             scores = self.proj.log_prob(x)
@@ -662,7 +668,7 @@ class XLMWithLMHeadModel(XLMPreTrainedModel):
         lang_id = self.config.lang_id
 
         effective_batch_size = input_ids.shape[0]
-        mask_token = torch.full((effective_batch_size, 1), mask_token_id, dtype=torch.long, device=input_ids.device)
+        mask_token = torch.full((effective_batch_size, 1), mask_token_id, dtype=torch.long, device=input_ids.device,)
         input_ids = torch.cat([input_ids, mask_token], dim=1)
         if lang_id is not None:
             langs = torch.full_like(input_ids, lang_id)
@@ -1109,7 +1115,7 @@ class XLMForTokenClassification(XLMPreTrainedModel):
                 active_loss = attention_mask.view(-1) == 1
                 active_logits = logits.view(-1, self.num_labels)
                 active_labels = torch.where(
-                    active_loss, labels.view(-1), torch.tensor(loss_fct.ignore_index).type_as(labels)
+                    active_loss, labels.view(-1), torch.tensor(loss_fct.ignore_index).type_as(labels),
                 )
                 loss = loss_fct(active_logits, active_labels)
             else:

@@ -132,11 +132,11 @@ class BertJapaneseTokenizer(BertTokenizer):
         if do_word_tokenize:
             if word_tokenizer_type == "basic":
                 self.word_tokenizer = BasicTokenizer(
-                    do_lower_case=do_lower_case, never_split=never_split, tokenize_chinese_chars=False
+                    do_lower_case=do_lower_case, never_split=never_split, tokenize_chinese_chars=False,
                 )
             elif word_tokenizer_type == "mecab":
                 self.word_tokenizer = MecabTokenizer(
-                    do_lower_case=do_lower_case, never_split=never_split, **(mecab_kwargs or {})
+                    do_lower_case=do_lower_case, never_split=never_split, **(mecab_kwargs or {}),
                 )
             else:
                 raise ValueError("Invalid word_tokenizer_type '{}' is specified.".format(word_tokenizer_type))
@@ -167,7 +167,9 @@ class BertJapaneseTokenizer(BertTokenizer):
 class MecabTokenizer:
     """Runs basic tokenization with MeCab morphological parser."""
 
-    def __init__(self, do_lower_case=False, never_split=None, normalize_text=True, mecab_option: Optional[str] = None):
+    def __init__(
+        self, do_lower_case=False, never_split=None, normalize_text=True, mecab_option: Optional[str] = None,
+    ):
         """Constructs a MecabTokenizer.
 
         Args:

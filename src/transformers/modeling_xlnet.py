@@ -1233,7 +1233,7 @@ class XLNetModel(XLNetPreTrainedModel):
             return tuple(v for v in [output, new_mems, hidden_states, attentions] if v is not None)
 
         return XLNetModelOutput(
-            last_hidden_state=output, mems=new_mems, hidden_states=hidden_states, attentions=attentions
+            last_hidden_state=output, mems=new_mems, hidden_states=hidden_states, attentions=attentions,
         )
 
 
@@ -1275,13 +1275,13 @@ class XLNetLMHeadModel(XLNetPreTrainedModel):
         # Build permutation mask so that previous tokens don't see last token
         sequence_length = input_ids.shape[1]
         perm_mask = torch.zeros(
-            (effective_batch_size, sequence_length, sequence_length), dtype=torch.float, device=input_ids.device
+            (effective_batch_size, sequence_length, sequence_length), dtype=torch.float, device=input_ids.device,
         )
         perm_mask[:, :, -1] = 1.0
 
         # We'll only predict the last token
         target_mapping = torch.zeros(
-            (effective_batch_size, 1, sequence_length), dtype=torch.float, device=input_ids.device
+            (effective_batch_size, 1, sequence_length), dtype=torch.float, device=input_ids.device,
         )
         target_mapping[0, 0, -1] = 1.0
 
@@ -1565,7 +1565,7 @@ class XLNetForTokenClassification(XLNetPreTrainedModel):
                 active_loss = attention_mask.view(-1) == 1
                 active_logits = logits.view(-1, self.num_labels)
                 active_labels = torch.where(
-                    active_loss, labels.view(-1), torch.tensor(loss_fct.ignore_index).type_as(labels)
+                    active_loss, labels.view(-1), torch.tensor(loss_fct.ignore_index).type_as(labels),
                 )
                 loss = loss_fct(active_logits, active_labels)
             else:
@@ -1951,7 +1951,13 @@ class XLNetForQuestionAnswering(XLNetPreTrainedModel):
             )  # Shape (batch size,): one single `cls_logits` for each sample
 
             if return_tuple:
-                outputs = (start_top_log_probs, start_top_index, end_top_log_probs, end_top_index, cls_logits)
+                outputs = (
+                    start_top_log_probs,
+                    start_top_index,
+                    end_top_log_probs,
+                    end_top_index,
+                    cls_logits,
+                )
                 return outputs + transformer_outputs[1:]
             else:
                 return XLNetForQuestionAnsweringOutput(

@@ -45,10 +45,10 @@ class TFAdaptiveSoftmaxMask(tf.keras.layers.Layer):
     def build(self, input_shape):
         if self.n_clusters > 0:
             self.cluster_weight = self.add_weight(
-                shape=(self.n_clusters, self.d_embed), initializer="zeros", trainable=True, name="cluster_weight"
+                shape=(self.n_clusters, self.d_embed), initializer="zeros", trainable=True, name="cluster_weight",
             )
             self.cluster_bias = self.add_weight(
-                shape=(self.n_clusters,), initializer="zeros", trainable=True, name="cluster_bias"
+                shape=(self.n_clusters,), initializer="zeros", trainable=True, name="cluster_bias",
             )
 
         if self.div_val == 1:
@@ -82,7 +82,7 @@ class TFAdaptiveSoftmaxMask(tf.keras.layers.Layer):
                 d_emb_i = self.d_embed // (self.div_val ** i)
 
                 weight = self.add_weight(
-                    shape=(d_emb_i, self.d_proj), initializer="zeros", trainable=True, name="out_projs_._{}".format(i)
+                    shape=(d_emb_i, self.d_proj), initializer="zeros", trainable=True, name="out_projs_._{}".format(i),
                 )
                 self.out_projs.append(weight)
                 weight = self.add_weight(
@@ -162,7 +162,7 @@ class TFAdaptiveSoftmaxMask(tf.keras.layers.Layer):
                         cur_logprob = self._gather_logprob(cur_tail_logprob, cur_target)
                         cur_logprob += cur_head_logprob[:, self.cutoff_ends[1] + i - 1]
                 if target is not None:
-                    loss += tf.scatter_nd(mask_idx, -cur_logprob, tf.cast(shape_list(loss), dtype=tf.int64))
+                    loss += tf.scatter_nd(mask_idx, -cur_logprob, tf.cast(shape_list(loss), dtype=tf.int64),)
             out = tf.concat(out, axis=-1)
 
         if target is not None:

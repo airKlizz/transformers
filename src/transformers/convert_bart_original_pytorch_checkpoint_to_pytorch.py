@@ -34,7 +34,12 @@ from transformers import (
 from transformers.modeling_bart import _make_linear_from_emb
 
 
-FAIRSEQ_MODELS = ["bart.large", "bart.large.mnli", "bart.large.cnn", "bart_xsum/model.pt"]
+FAIRSEQ_MODELS = [
+    "bart.large",
+    "bart.large.mnli",
+    "bart.large.cnn",
+    "bart_xsum/model.pt",
+]
 extra_arch = {"bart.large": BartModel, "bart.large.mnli": BartForSequenceClassification}
 if version.parse(fairseq.__version__) < version.parse("0.9.0"):
     raise Exception("requires fairseq >= 0.9.0")
@@ -46,10 +51,10 @@ logger = logging.getLogger(__name__)
 SAMPLE_TEXT = " Hello world! cécé herlolip"
 
 mnli_rename_keys = [
-    ("model.classification_heads.mnli.dense.weight", "classification_head.dense.weight"),
+    ("model.classification_heads.mnli.dense.weight", "classification_head.dense.weight",),
     ("model.classification_heads.mnli.dense.bias", "classification_head.dense.bias"),
-    ("model.classification_heads.mnli.out_proj.weight", "classification_head.out_proj.weight"),
-    ("model.classification_heads.mnli.out_proj.bias", "classification_head.out_proj.bias"),
+    ("model.classification_heads.mnli.out_proj.weight", "classification_head.out_proj.weight",),
+    ("model.classification_heads.mnli.out_proj.bias", "classification_head.out_proj.bias",),
 ]
 
 
@@ -146,11 +151,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # Required parameters
     parser.add_argument(
-        "fairseq_path", type=str, help="bart.large, bart.large.cnn or a path to a model.pt on local filesystem."
+        "fairseq_path", type=str, help="bart.large, bart.large.cnn or a path to a model.pt on local filesystem.",
     )
-    parser.add_argument("pytorch_dump_folder_path", default=None, type=str, help="Path to the output PyTorch model.")
     parser.add_argument(
-        "--hf_config", default=None, type=str, help="Which huggingface architecture to use: bart-large-xsum"
+        "pytorch_dump_folder_path", default=None, type=str, help="Path to the output PyTorch model.",
+    )
+    parser.add_argument(
+        "--hf_config", default=None, type=str, help="Which huggingface architecture to use: bart-large-xsum",
     )
     args = parser.parse_args()
-    convert_bart_checkpoint(args.fairseq_path, args.pytorch_dump_folder_path, hf_checkpoint_name=args.hf_config)
+    convert_bart_checkpoint(
+        args.fairseq_path, args.pytorch_dump_folder_path, hf_checkpoint_name=args.hf_config,
+    )

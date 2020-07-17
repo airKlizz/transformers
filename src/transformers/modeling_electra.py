@@ -359,7 +359,7 @@ class ElectraModel(ElectraPreTrainedModel):
         head_mask = self.get_head_mask(head_mask, self.config.num_hidden_layers)
 
         hidden_states = self.embeddings(
-            input_ids=input_ids, position_ids=position_ids, token_type_ids=token_type_ids, inputs_embeds=inputs_embeds
+            input_ids=input_ids, position_ids=position_ids, token_type_ids=token_type_ids, inputs_embeds=inputs_embeds,
         )
 
         if hasattr(self, "embeddings_project"):
@@ -554,7 +554,7 @@ class ElectraForPreTraining(ElectraPreTrainedModel):
                 active_labels = labels[active_loss]
                 loss = loss_fct(active_logits, active_labels.float())
             else:
-                loss = loss_fct(logits.view(-1, discriminator_sequence_output.shape[1]), labels.float())
+                loss = loss_fct(logits.view(-1, discriminator_sequence_output.shape[1]), labels.float(),)
 
         if return_tuple:
             output = (logits,) + discriminator_hidden_states[1:]
@@ -608,7 +608,7 @@ class ElectraForMaskedLM(ElectraPreTrainedModel):
         output_attentions=None,
         output_hidden_states=None,
         return_tuple=None,
-        **kwargs
+        **kwargs,
     ):
         r"""
         labels (:obj:`torch.LongTensor` of shape :obj:`(batch_size, sequence_length)`, `optional`, defaults to :obj:`None`):

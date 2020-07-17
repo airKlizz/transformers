@@ -78,7 +78,7 @@ LocalSelfAttentionOutput = namedtuple("LocalSelfAttentionOutput", ["hidden_state
 AttentionOutput = namedtuple("AttentionOutput", ["hidden_states", "attention_probs", "buckets"])
 ReformerOutput = namedtuple("ReformerOutput", ["hidden_states", "attn_output", "attention_probs", "buckets"])
 ReformerBackwardOutput = namedtuple(
-    "ReformerBackwardOutput", ["attn_output", "hidden_states", "grad_attn_output", "grad_hidden_states"]
+    "ReformerBackwardOutput", ["attn_output", "hidden_states", "grad_attn_output", "grad_hidden_states"],
 )
 ReformerEncoderOutput = namedtuple("ReformerEncoderOutput", ["hidden_states", "all_hidden_states", "all_attentions"])
 
@@ -143,7 +143,7 @@ class AxialPositionEmbeddings(nn.Module):
             assert (
                 reduce(mul, self.axial_pos_shape) == sequence_length
             ), "If training, make sure that config.axial_pos_shape factors: {} multiply to sequence length. Got prod({}) != sequence_length: {}. You might want to consider padding your sequence length to {} or changing config.axial_pos_shape.".format(
-                self.axial_pos_shape, self.axial_pos_shape, sequence_length, reduce(mul, self.axial_pos_shape)
+                self.axial_pos_shape, self.axial_pos_shape, sequence_length, reduce(mul, self.axial_pos_shape),
             )
             if self.dropout > 0:
                 weights = torch.cat(broadcasted_weights, dim=-1)
@@ -175,7 +175,7 @@ class AxialPositionEmbeddings(nn.Module):
 
             # cut to columns that are needed
             position_encodings = torch.cat(
-                [weight[:, :required_pos_encodings_columns] for weight in broadcasted_weights], dim=-1
+                [weight[:, :required_pos_encodings_columns] for weight in broadcasted_weights], dim=-1,
             )
             position_encodings = torch.reshape(position_encodings, (batch_size, -1, position_encodings.shape[-1]))[
                 :, :sequence_length
@@ -387,7 +387,7 @@ class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
                 int(buckets.shape[-1]) == num_hashes * sequence_length
             ), "last dim of buckets is {}, but should be {}".format(buckets.shape[-1], num_hashes * sequence_length)
 
-            sorted_bucket_idx, undo_sorted_bucket_idx = self._get_sorted_bucket_idx_and_undo_sorted_bucket_idx(
+            (sorted_bucket_idx, undo_sorted_bucket_idx,) = self._get_sorted_bucket_idx_and_undo_sorted_bucket_idx(
                 sequence_length, buckets, num_hashes
             )
 
@@ -497,7 +497,12 @@ class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
             # for determinism
             torch.manual_seed(self.hash_seed)
 
-        rotations_shape = (self.num_attention_heads, vectors.shape[-1], num_hashes, rotation_size // 2)
+        rotations_shape = (
+            self.num_attention_heads,
+            vectors.shape[-1],
+            num_hashes,
+            rotation_size // 2,
+        )
         # create a random self.attention_head_size x num_hashes x num_buckets/2
         random_rotations = torch.randn(rotations_shape, device=vectors.device, dtype=vectors.dtype)
 
@@ -528,7 +533,7 @@ class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
             # assign padding tokens extra bucket
             buckets_mask = attention_mask.to(torch.uint8)[:, None, None, :].expand(buckets.shape)
             buckets = torch.where(
-                buckets_mask, buckets, torch.tensor(num_buckets - 1, dtype=torch.long, device=buckets.device)
+                buckets_mask, buckets, torch.tensor(num_buckets - 1, dtype=torch.long, device=buckets.device),
             )
 
         # buckets is now (Batch_size x Num_Attn_Heads x Num_Hashes x Seq_Len).
@@ -584,7 +589,10 @@ class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
             int((self.max_position_embeddings // self.chunk_length) ** (0.5)), self.chunk_length,
         )
         if num_buckets > num_buckets_limit:
-            num_buckets = [2 ** (num_buckets_pow_2 // 2), 2 ** (num_buckets_pow_2 - num_buckets_pow_2 // 2)]
+            num_buckets = [
+                2 ** (num_buckets_pow_2 // 2),
+                2 ** (num_buckets_pow_2 - num_buckets_pow_2 // 2),
+            ]
 
         logger.warning("config.num_buckets is not set. Setting config.num_buckets to {}...".format(num_buckets))
 
@@ -617,7 +625,7 @@ class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
         # if chunked attention split bucket idxs to query and key
         if self.chunk_length < sequence_length:
             query_bucket_idx = self._split_seq_length_dim_to(
-                sorted_bucket_idx_per_hash, -1, self.chunk_length, self.num_attention_heads
+                sorted_bucket_idx_per_hash, -1, self.chunk_length, self.num_attention_heads,
             )
             key_value_bucket_idx = self._look_adjacent(query_bucket_idx, self.num_chunks_before, self.num_chunks_after)
         else:
@@ -632,7 +640,7 @@ class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
             mask_value = self.mask_value_float32
 
         mask = self._compute_attn_mask(
-            query_bucket_idx, key_value_bucket_idx, attention_mask, query_key_dots.shape, sequence_length
+            query_bucket_idx, key_value_bucket_idx, attention_mask, query_key_dots.shape, sequence_length,
         )
 
         if mask is not None:
@@ -688,7 +696,9 @@ class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
 
         return out_vectors, logits, attention_probs
 
-    def _compute_attn_mask(self, query_indices, key_indices, attention_mask, query_key_dot_shape, sequence_length):
+    def _compute_attn_mask(
+        self, query_indices, key_indices, attention_mask, query_key_dot_shape, sequence_length,
+    ):
 
         # attention mask for LSH
         if attention_mask is not None:
@@ -840,7 +850,7 @@ class LocalSelfAttention(nn.Module, EfficientAttentionMixin):
 
         # normalize key vectors
         key_vectors = key_vectors / torch.sqrt(
-            torch.tensor(self.attention_head_size, device=key_vectors.device, dtype=key_vectors.dtype)
+            torch.tensor(self.attention_head_size, device=key_vectors.device, dtype=key_vectors.dtype,)
         )
 
         # get sequence length indices
@@ -880,7 +890,7 @@ class LocalSelfAttention(nn.Module, EfficientAttentionMixin):
         del query_vectors, key_vectors
 
         mask = self._compute_attn_mask(
-            query_indices, key_indices, attention_mask, query_key_dots.shape, sequence_length
+            query_indices, key_indices, attention_mask, query_key_dots.shape, sequence_length,
         )
 
         if mask is not None:
@@ -928,7 +938,9 @@ class LocalSelfAttention(nn.Module, EfficientAttentionMixin):
 
         return LocalSelfAttentionOutput(hidden_states=out_vectors, attention_probs=attention_probs)
 
-    def _compute_attn_mask(self, query_indices, key_indices, attention_mask, query_key_dots_shape, sequence_length):
+    def _compute_attn_mask(
+        self, query_indices, key_indices, attention_mask, query_key_dots_shape, sequence_length,
+    ):
 
         # chunk attention mask and look before and after
         if attention_mask is not None:
@@ -1386,7 +1398,7 @@ class ReformerEncoder(nn.Module):
         hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
 
         return ReformerEncoderOutput(
-            hidden_states=hidden_states, all_hidden_states=all_hidden_states, all_attentions=all_attentions
+            hidden_states=hidden_states, all_hidden_states=all_hidden_states, all_attentions=all_attentions,
         )
 
 
@@ -1597,12 +1609,12 @@ class ReformerModel(ReformerPreTrainedModel):
             if self.training is True:
                 raise ValueError(
                     "If training, sequence Length {} has to be a multiple of least common multiple chunk_length {}. Please consider padding the input to a length of {}.".format(
-                        input_shape[-1], least_common_mult_chunk_length, input_shape[-1] + padding_length
+                        input_shape[-1], least_common_mult_chunk_length, input_shape[-1] + padding_length,
                     )
                 )
 
             # pad input
-            input_ids, inputs_embeds, attention_mask, position_ids, input_shape = self._pad_to_mult_of_chunk_length(
+            (input_ids, inputs_embeds, attention_mask, position_ids, input_shape,) = self._pad_to_mult_of_chunk_length(
                 input_ids,
                 inputs_embeds=inputs_embeds,
                 attention_mask=attention_mask,
@@ -1634,7 +1646,7 @@ class ReformerModel(ReformerPreTrainedModel):
 
         if return_tuple:
             return tuple(v for v in [sequence_output, hidden_states, attentions] if v is not None)
-        return BaseModelOutput(last_hidden_state=sequence_output, hidden_states=hidden_states, attentions=attentions)
+        return BaseModelOutput(last_hidden_state=sequence_output, hidden_states=hidden_states, attentions=attentions,)
 
     def _pad_to_mult_of_chunk_length(
         self,
@@ -1670,7 +1682,7 @@ class ReformerModel(ReformerPreTrainedModel):
             attention_mask = torch.cat(
                 [
                     torch.ones(input_shape, device=device, dtype=torch.uint8),
-                    torch.zeros((input_shape[0], padding_length), device=device, dtype=torch.uint8),
+                    torch.zeros((input_shape[0], padding_length), device=device, dtype=torch.uint8,),
                 ],
                 dim=-1,
             )
@@ -1694,7 +1706,9 @@ class ReformerModel(ReformerPreTrainedModel):
         return input_ids, inputs_embeds, attention_mask, position_ids, input_shape
 
 
-@add_start_docstrings("""Reformer Model with a `language modeling` head on top. """, REFORMER_START_DOCSTRING)
+@add_start_docstrings(
+    """Reformer Model with a `language modeling` head on top. """, REFORMER_START_DOCSTRING,
+)
 class ReformerModelWithLMHead(ReformerPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
@@ -1785,7 +1799,9 @@ class ReformerModelWithLMHead(ReformerPreTrainedModel):
         return inputs_dict
 
 
-@add_start_docstrings("""Reformer Model with a `language modeling` head on top. """, REFORMER_START_DOCSTRING)
+@add_start_docstrings(
+    """Reformer Model with a `language modeling` head on top. """, REFORMER_START_DOCSTRING,
+)
 class ReformerForMaskedLM(ReformerPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)

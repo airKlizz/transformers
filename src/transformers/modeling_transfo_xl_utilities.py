@@ -110,7 +110,7 @@ class ProjectedAdaptiveLogSoftmax(nn.Module):
             hidden = hidden.view(-1, hidden.size(-1))
 
         if self.n_clusters == 0:
-            logit = self._compute_logit(hidden, self.out_layers[0].weight, self.out_layers[0].bias, self.out_projs[0])
+            logit = self._compute_logit(hidden, self.out_layers[0].weight, self.out_layers[0].bias, self.out_projs[0],)
             if labels is not None:
                 out = -F.log_softmax(logit, dim=-1).gather(1, labels.unsqueeze(1)).squeeze(1)
             else:
@@ -204,7 +204,7 @@ class ProjectedAdaptiveLogSoftmax(nn.Module):
             - Output: :math:`(N, n\_classes)`
         """
         if self.n_clusters == 0:
-            logit = self._compute_logit(hidden, self.out_layers[0].weight, self.out_layers[0].bias, self.out_projs[0])
+            logit = self._compute_logit(hidden, self.out_layers[0].weight, self.out_layers[0].bias, self.out_projs[0],)
             return F.log_softmax(logit, dim=-1)
         else:
             # construct weights and biases

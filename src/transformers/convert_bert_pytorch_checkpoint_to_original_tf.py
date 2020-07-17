@@ -43,7 +43,12 @@ def convert_pytorch_checkpoint_to_tf(model: BertModel, ckpt_dir: str, model_name
         N BertForQuestionAnswering
     """
 
-    tensors_to_transpose = ("dense.weight", "attention.self.query", "attention.self.key", "attention.self.value")
+    tensors_to_transpose = (
+        "dense.weight",
+        "attention.self.query",
+        "attention.self.key",
+        "attention.self.value",
+    )
 
     var_map = (
         ("layer.", "layer_"),
@@ -68,7 +73,7 @@ def convert_pytorch_checkpoint_to_tf(model: BertModel, ckpt_dir: str, model_name
 
     def create_tf_var(tensor: np.ndarray, name: str, session: tf.Session):
         tf_dtype = tf.dtypes.as_dtype(tensor.dtype)
-        tf_var = tf.get_variable(dtype=tf_dtype, shape=tensor.shape, name=name, initializer=tf.zeros_initializer())
+        tf_var = tf.get_variable(dtype=tf_dtype, shape=tensor.shape, name=name, initializer=tf.zeros_initializer(),)
         session.run(tf.variables_initializer([tf_var]))
         session.run(tf_var)
         return tf_var
@@ -91,12 +96,18 @@ def convert_pytorch_checkpoint_to_tf(model: BertModel, ckpt_dir: str, model_name
 
 def main(raw_args=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name", type=str, required=True, help="model name e.g. bert-base-uncased")
     parser.add_argument(
-        "--cache_dir", type=str, default=None, required=False, help="Directory containing pytorch model"
+        "--model_name", type=str, required=True, help="model name e.g. bert-base-uncased",
     )
-    parser.add_argument("--pytorch_model_path", type=str, required=True, help="/path/to/<pytorch-model-name>.bin")
-    parser.add_argument("--tf_cache_dir", type=str, required=True, help="Directory in which to save tensorflow model")
+    parser.add_argument(
+        "--cache_dir", type=str, default=None, required=False, help="Directory containing pytorch model",
+    )
+    parser.add_argument(
+        "--pytorch_model_path", type=str, required=True, help="/path/to/<pytorch-model-name>.bin",
+    )
+    parser.add_argument(
+        "--tf_cache_dir", type=str, required=True, help="Directory in which to save tensorflow model",
+    )
     args = parser.parse_args(raw_args)
 
     model = BertModel.from_pretrained(

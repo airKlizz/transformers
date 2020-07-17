@@ -47,7 +47,9 @@ class ModalEmbeddings(nn.Module):
         self.LayerNorm = embeddings.LayerNorm
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def forward(self, input_modal, start_token=None, end_token=None, position_ids=None, token_type_ids=None):
+    def forward(
+        self, input_modal, start_token=None, end_token=None, position_ids=None, token_type_ids=None,
+    ):
         token_embeddings = self.proj_embeddings(self.encoder(input_modal))
         seq_length = token_embeddings.size(1)
 
@@ -67,7 +69,7 @@ class ModalEmbeddings(nn.Module):
 
         if token_type_ids is None:
             token_type_ids = torch.zeros(
-                (input_modal.size(0), seq_length), dtype=torch.long, device=input_modal.device
+                (input_modal.size(0), seq_length), dtype=torch.long, device=input_modal.device,
             )
 
         position_embeddings = self.position_embeddings(position_ids)
@@ -225,7 +227,7 @@ class MMBTModel(nn.Module, ModuleUtilsMixin):
             token_type_ids = torch.ones(input_txt_shape, dtype=torch.long, device=device)
 
         txt_embeddings = self.transformer.embeddings(
-            input_ids=input_ids, position_ids=position_ids, token_type_ids=token_type_ids, inputs_embeds=inputs_embeds
+            input_ids=input_ids, position_ids=position_ids, token_type_ids=token_type_ids, inputs_embeds=inputs_embeds,
         )
 
         embedding_output = torch.cat([modal_embeddings, txt_embeddings], 1)
@@ -236,13 +238,13 @@ class MMBTModel(nn.Module, ModuleUtilsMixin):
             attention_mask = torch.ones(input_shape, device=device)
         else:
             attention_mask = torch.cat(
-                [torch.ones(input_modal_shape, device=device, dtype=torch.long), attention_mask], dim=1
+                [torch.ones(input_modal_shape, device=device, dtype=torch.long), attention_mask,], dim=1,
             )
         if encoder_attention_mask is None:
             encoder_attention_mask = torch.ones(input_shape, device=device)
         else:
             encoder_attention_mask = torch.cat(
-                [torch.ones(input_modal_shape, device=device), encoder_attention_mask], dim=1
+                [torch.ones(input_modal_shape, device=device), encoder_attention_mask], dim=1,
             )
 
         extended_attention_mask = self.get_extended_attention_mask(attention_mask, input_shape, self.device)

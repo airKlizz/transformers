@@ -135,7 +135,7 @@ class DPRQuestionEncoderTokenizerFast(BertTokenizerFast):
 
 
 DPRSpanPrediction = collections.namedtuple(
-    "DPRSpanPrediction", ["span_score", "relevance_score", "doc_id", "start_index", "end_index", "text"]
+    "DPRSpanPrediction", ["span_score", "relevance_score", "doc_id", "start_index", "end_index", "text"],
 )
 
 DPRReaderOutput = collections.namedtuple("DPRReaderOutput", ["start_logits", "end_logits", "relevance_logits"])
@@ -254,7 +254,7 @@ class CustomDPRReaderTokenizerMixin:
         if return_attention_mask is not False:
             attention_mask = [input_ids != self.pad_token_id for input_ids in encoded_inputs["input_ids"]]
             encoded_inputs["attention_mask"] = attention_mask
-        return self.pad(encoded_inputs, padding=padding, max_length=max_length, return_tensors=return_tensors)
+        return self.pad(encoded_inputs, padding=padding, max_length=max_length, return_tensors=return_tensors,)
 
     def decode_best_spans(
         self,
@@ -340,7 +340,7 @@ class CustomDPRReaderTokenizerMixin:
         scores = []
         for (start_index, start_score) in enumerate(start_logits):
             for (answer_length, end_score) in enumerate(end_logits[start_index : start_index + max_answer_length]):
-                scores.append(((start_index, start_index + answer_length), start_score + end_score))
+                scores.append(((start_index, start_index + answer_length), start_score + end_score,))
         scores = sorted(scores, key=lambda x: x[1], reverse=True)
         chosen_span_intervals = []
         for (start_index, end_index), score in scores:

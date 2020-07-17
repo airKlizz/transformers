@@ -153,7 +153,9 @@ class TFAttention(tf.keras.layers.Layer):
         key = self.split_heads(key)
         value = self.split_heads(value)
 
-        attn_outputs = self._attn([query, key, value, attention_mask, head_mask, output_attentions], training=training)
+        attn_outputs = self._attn(
+            [query, key, value, attention_mask, head_mask, output_attentions], training=training,
+        )
         a = attn_outputs[0]
 
         a = self.merge_heads(a)
@@ -216,7 +218,7 @@ class TFOpenAIGPTMainLayer(tf.keras.layers.Layer):
         self.n_embd = config.n_embd
 
         self.tokens_embed = TFSharedEmbeddings(
-            config.vocab_size, config.n_embd, initializer_range=config.initializer_range, name="tokens_embed"
+            config.vocab_size, config.n_embd, initializer_range=config.initializer_range, name="tokens_embed",
         )
         self.positions_embed = tf.keras.layers.Embedding(
             config.n_positions,
@@ -342,7 +344,7 @@ class TFOpenAIGPTMainLayer(tf.keras.layers.Layer):
             if cast_bool_to_primitive(output_hidden_states) is True:
                 all_hidden_states = all_hidden_states + (tf.reshape(hidden_states, output_shape),)
 
-            outputs = block([hidden_states, attention_mask, head_mask[i], output_attentions], training=training)
+            outputs = block([hidden_states, attention_mask, head_mask[i], output_attentions], training=training,)
             hidden_states = outputs[0]
             if cast_bool_to_primitive(output_attentions) is True:
                 all_attentions.append(outputs[1])
@@ -571,7 +573,7 @@ class TFOpenAIGPTDoubleHeadsModel(TFOpenAIGPTPreTrainedModel):
         config.num_labels = 1
         self.transformer = TFOpenAIGPTMainLayer(config, name="transformer")
         self.multiple_choice_head = TFSequenceSummary(
-            config, initializer_range=config.initializer_range, name="multiple_choice_head"
+            config, initializer_range=config.initializer_range, name="multiple_choice_head",
         )
 
     def get_output_embeddings(self):

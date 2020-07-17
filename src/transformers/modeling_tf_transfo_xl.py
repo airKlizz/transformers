@@ -69,7 +69,7 @@ class TFPositionwiseFF(tf.keras.layers.Layer):
         self.dropout = dropout
 
         self.layer_1 = tf.keras.layers.Dense(
-            d_inner, kernel_initializer=get_initializer(init_std), activation=tf.nn.relu, name="CoreNet_._0"
+            d_inner, kernel_initializer=get_initializer(init_std), activation=tf.nn.relu, name="CoreNet_._0",
         )
         self.drop_1 = tf.keras.layers.Dropout(dropout)
         self.layer_2 = tf.keras.layers.Dense(d_model, kernel_initializer=get_initializer(init_std), name="CoreNet_._3")
@@ -129,13 +129,13 @@ class TFRelPartialLearnableMultiHeadAttn(tf.keras.layers.Layer):
         self.dropout = dropout
 
         self.qkv_net = tf.keras.layers.Dense(
-            3 * n_head * d_head, kernel_initializer=get_initializer(init_std), use_bias=False, name="qkv_net"
+            3 * n_head * d_head, kernel_initializer=get_initializer(init_std), use_bias=False, name="qkv_net",
         )
 
         self.drop = tf.keras.layers.Dropout(dropout)
         self.dropatt = tf.keras.layers.Dropout(dropatt)
         self.o_net = tf.keras.layers.Dense(
-            d_model, kernel_initializer=get_initializer(init_std), use_bias=False, name="o_net"
+            d_model, kernel_initializer=get_initializer(init_std), use_bias=False, name="o_net",
         )
 
         self.layer_norm = tf.keras.layers.LayerNormalization(epsilon=layer_norm_epsilon, name="layer_norm")
@@ -152,16 +152,16 @@ class TFRelPartialLearnableMultiHeadAttn(tf.keras.layers.Layer):
             self.r_w_bias = None
 
         self.r_net = tf.keras.layers.Dense(
-            self.n_head * self.d_head, kernel_initializer=get_initializer(init_std), use_bias=False, name="r_net"
+            self.n_head * self.d_head, kernel_initializer=get_initializer(init_std), use_bias=False, name="r_net",
         )
 
     def build(self, input_shape):
         if self.r_r_bias is None or self.r_w_bias is None:  # Biases are not shared
             self.r_r_bias = self.add_weight(
-                shape=(self.n_head, self.d_head), initializer="zeros", trainable=True, name="r_r_bias"
+                shape=(self.n_head, self.d_head), initializer="zeros", trainable=True, name="r_r_bias",
             )
             self.r_w_bias = self.add_weight(
-                shape=(self.n_head, self.d_head), initializer="zeros", trainable=True, name="r_w_bias"
+                shape=(self.n_head, self.d_head), initializer="zeros", trainable=True, name="r_w_bias",
             )
         super().build(input_shape)
 
@@ -305,7 +305,7 @@ class TFRelPartialLearnableDecoderLayer(tf.keras.layers.Layer):
     def call(self, inputs, training=False):
         dec_inp, r, dec_attn_mask, mems, head_mask, output_attentions = inputs
         attn_outputs = self.dec_attn(
-            [dec_inp, r, dec_attn_mask, mems, head_mask, output_attentions], training=training
+            [dec_inp, r, dec_attn_mask, mems, head_mask, output_attentions], training=training,
         )
         ff_output = self.pos_ff(attn_outputs[0], training=training)
 
@@ -460,10 +460,10 @@ class TFTransfoXLMainLayer(tf.keras.layers.Layer):
     def build(self, input_shape):
         if not self.untie_r:
             self.r_w_bias = self.add_weight(
-                shape=(self.n_head, self.d_head), initializer="zeros", trainable=True, name="r_w_bias"
+                shape=(self.n_head, self.d_head), initializer="zeros", trainable=True, name="r_w_bias",
             )
             self.r_r_bias = self.add_weight(
-                shape=(self.n_head, self.d_head), initializer="zeros", trainable=True, name="r_r_bias"
+                shape=(self.n_head, self.d_head), initializer="zeros", trainable=True, name="r_r_bias",
             )
         super().build(input_shape)
 
@@ -595,7 +595,7 @@ class TFTransfoXLMainLayer(tf.keras.layers.Layer):
         dec_attn_mask = tf.concat([attn_mask_pad, mask_u - mask_dia], 1)
         if self.same_length:
             mask_l = tf.linalg.band_part(attn_mask, -1, 0)
-            dec_attn_mask = tf.concat([dec_attn_mask[:, :qlen] + mask_l - mask_dia, dec_attn_mask[:, qlen:]], 1)
+            dec_attn_mask = tf.concat([dec_attn_mask[:, :qlen] + mask_l - mask_dia, dec_attn_mask[:, qlen:]], 1,)
         # ::: PyTorch masking code for reference :::
         # if self.same_length:
         #     all_ones = word_emb.new_ones((qlen, klen), dtype=torch.uint8)
@@ -625,7 +625,7 @@ class TFTransfoXLMainLayer(tf.keras.layers.Layer):
                 hids.append(core_out)
                 mems_i = None if mems is None else mems[i]
                 layer_outputs = layer(
-                    [core_out, pos_emb, dec_attn_mask, mems_i, head_mask[i], output_attentions], training=training,
+                    [core_out, pos_emb, dec_attn_mask, mems_i, head_mask[i], output_attentions,], training=training,
                 )
                 core_out = layer_outputs[0]
                 if cast_bool_to_primitive(output_attentions) is True:
@@ -785,7 +785,7 @@ class TFTransfoXLLMHeadModel(TFTransfoXLPreTrainedModel):
         ), "Sampling from the softmax is not implemented yet. Please look at issue: #3310: https://github.com/huggingface/transformers/issues/3310"
 
         self.crit = TFAdaptiveSoftmaxMask(
-            config.vocab_size, config.d_embed, config.d_model, config.cutoffs, div_val=config.div_val, name="crit"
+            config.vocab_size, config.d_embed, config.d_model, config.cutoffs, div_val=config.div_val, name="crit",
         )
 
     def get_output_embeddings(self):
@@ -860,7 +860,7 @@ class TFTransfoXLLMHeadModel(TFTransfoXLPreTrainedModel):
             bsz, tgt_len = shape_list(inputs_embeds)[:2]
 
         transformer_outputs = self.transformer(
-            [input_ids, mems, head_mask, inputs_embeds, output_attentions, output_hidden_states], training=training
+            [input_ids, mems, head_mask, inputs_embeds, output_attentions, output_hidden_states,], training=training,
         )
 
         last_hidden = transformer_outputs[0]

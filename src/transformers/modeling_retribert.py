@@ -115,7 +115,7 @@ class RetriBertModel(RetriBertPreTrainedModel):
 
             # run embedding layer on everything at once
             embedding_output = sent_encoder.embeddings(
-                input_ids=input_ids, position_ids=None, token_type_ids=token_type_ids, inputs_embeds=None
+                input_ids=input_ids, position_ids=None, token_type_ids=token_type_ids, inputs_embeds=None,
             )
             # run encoding and pooling on one mini-batch at a time
             pooled_output_list = []
@@ -144,7 +144,7 @@ class RetriBertModel(RetriBertPreTrainedModel):
         return self.project_doc(a_reps)
 
     def forward(
-        self, input_ids_query, attention_mask_query, input_ids_doc, attention_mask_doc, checkpoint_batch_size=-1
+        self, input_ids_query, attention_mask_query, input_ids_doc, attention_mask_doc, checkpoint_batch_size=-1,
     ):
         r"""
     Args:

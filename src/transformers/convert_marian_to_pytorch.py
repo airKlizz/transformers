@@ -104,7 +104,7 @@ GROUPS = [
     ("da+fo+is+no+nb+nn+sv", "SCANDINAVIA"),
     ("se+sma+smj+smn+sms", "SAMI"),
     ("nb_NO+nb+nn_NO+nn+nog+no_nb+no", "NORWAY"),
-    ("ga+cy+br+gd+kw+gv", "CELTIC"),  # https://en.wikipedia.org/wiki/Insular_Celtic_languages
+    ("ga+cy+br+gd+kw+gv", "CELTIC",),  # https://en.wikipedia.org/wiki/Insular_Celtic_languages
 ]
 GROUP_TO_OPUS_NAME = {
     "opus-mt-ZH-de": "cmn+cn+yue+ze_zh+zh_cn+zh_CN+zh_HK+zh_tw+zh_TW+zh_yue+zhs+zht+zh-de",

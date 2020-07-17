@@ -296,7 +296,7 @@ class TFElectraMainLayer(TFElectraPreTrainedModel):
             hidden_states = self.embeddings_project(hidden_states, training=training)
 
         hidden_states = self.encoder(
-            [hidden_states, extended_attention_mask, head_mask, output_attentions, output_hidden_states],
+            [hidden_states, extended_attention_mask, head_mask, output_attentions, output_hidden_states,],
             training=training,
         )
 
@@ -385,7 +385,9 @@ class TFElectraModel(TFElectraPreTrainedModel):
         self.electra = TFElectraMainLayer(config, name="electra")
 
     @add_start_docstrings_to_callable(ELECTRA_INPUTS_DOCSTRING)
-    @add_code_sample_docstrings(tokenizer_class=_TOKENIZER_FOR_DOC, checkpoint="google/electra-small-discriminator")
+    @add_code_sample_docstrings(
+        tokenizer_class=_TOKENIZER_FOR_DOC, checkpoint="google/electra-small-discriminator",
+    )
     def call(self, inputs, **kwargs):
         r"""
     Returns:
@@ -605,11 +607,13 @@ class TFElectraForTokenClassification(TFElectraPreTrainedModel, TFTokenClassific
         self.electra = TFElectraMainLayer(config, name="electra")
         self.dropout = tf.keras.layers.Dropout(config.hidden_dropout_prob)
         self.classifier = tf.keras.layers.Dense(
-            config.num_labels, kernel_initializer=get_initializer(config.initializer_range), name="classifier"
+            config.num_labels, kernel_initializer=get_initializer(config.initializer_range), name="classifier",
         )
 
     @add_start_docstrings_to_callable(ELECTRA_INPUTS_DOCSTRING)
-    @add_code_sample_docstrings(tokenizer_class=_TOKENIZER_FOR_DOC, checkpoint="google/electra-small-discriminator")
+    @add_code_sample_docstrings(
+        tokenizer_class=_TOKENIZER_FOR_DOC, checkpoint="google/electra-small-discriminator",
+    )
     def call(
         self,
         inputs=None,
@@ -687,11 +691,13 @@ class TFElectraForQuestionAnswering(TFElectraPreTrainedModel, TFQuestionAnswerin
 
         self.electra = TFElectraMainLayer(config, name="electra")
         self.qa_outputs = tf.keras.layers.Dense(
-            config.num_labels, kernel_initializer=get_initializer(config.initializer_range), name="qa_outputs"
+            config.num_labels, kernel_initializer=get_initializer(config.initializer_range), name="qa_outputs",
         )
 
     @add_start_docstrings_to_callable(ELECTRA_INPUTS_DOCSTRING)
-    @add_code_sample_docstrings(tokenizer_class=_TOKENIZER_FOR_DOC, checkpoint="google/electra-small-discriminator")
+    @add_code_sample_docstrings(
+        tokenizer_class=_TOKENIZER_FOR_DOC, checkpoint="google/electra-small-discriminator",
+    )
     def call(
         self,
         inputs=None,

@@ -167,7 +167,9 @@ class MultiHeadAttention(torch.nn.Module):
 
 
 def point_wise_feed_forward_network(d_model_size, dff):
-    return torch.nn.Sequential(torch.nn.Linear(d_model_size, dff), torch.nn.ReLU(), torch.nn.Linear(dff, d_model_size))
+    return torch.nn.Sequential(
+        torch.nn.Linear(d_model_size, dff), torch.nn.ReLU(), torch.nn.Linear(dff, d_model_size),
+    )
 
 
 class EncoderLayer(torch.nn.Module):
@@ -184,7 +186,7 @@ class EncoderLayer(torch.nn.Module):
         self.dropout2 = torch.nn.Dropout(rate)
 
     def forward(
-        self, x, mask, layer_past=None, attention_mask=None, head_mask=None, use_cache=False, output_attentions=False
+        self, x, mask, layer_past=None, attention_mask=None, head_mask=None, use_cache=False, output_attentions=False,
     ):
         normed = self.layernorm1(x)
         attn_outputs = self.multi_head_attention(
@@ -392,7 +394,7 @@ class CTRLModel(CTRLPreTrainedModel):
             past_length = past_key_values[0][0].size(-2)
         if position_ids is None:
             device = input_ids.device if input_ids is not None else inputs_embeds.device
-            position_ids = torch.arange(past_length, input_shape[-1] + past_length, dtype=torch.long, device=device)
+            position_ids = torch.arange(past_length, input_shape[-1] + past_length, dtype=torch.long, device=device,)
             position_ids = position_ids.unsqueeze(0).view(-1, input_shape[-1])
 
         # Attention mask.
@@ -504,7 +506,11 @@ class CTRLLMHeadModel(CTRLPreTrainedModel):
         if past:
             input_ids = input_ids[:, -1].unsqueeze(-1)
 
-        return {"input_ids": input_ids, "past_key_values": past, "use_cache": kwargs["use_cache"]}
+        return {
+            "input_ids": input_ids,
+            "past_key_values": past,
+            "use_cache": kwargs["use_cache"],
+        }
 
     @add_start_docstrings_to_callable(CTRL_INPUTS_DOCSTRING)
     @add_code_sample_docstrings(

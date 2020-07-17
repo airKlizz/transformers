@@ -98,7 +98,7 @@ def load_tf_weights_in_mobilebert(model, config, tf_checkpoint_path):
         # adam_v and adam_m are variables used in AdamWeightDecayOptimizer to calculated m and v
         # which are not required for using pretrained model
         if any(
-            n in ["adam_v", "adam_m", "AdamWeightDecayOptimizer", "AdamWeightDecayOptimizer_1", "global_step"]
+            n in ["adam_v", "adam_m", "AdamWeightDecayOptimizer", "AdamWeightDecayOptimizer_1", "global_step",]
             for n in name
         ):
             logger.info("Skipping {}".format("/".join(name)))
@@ -154,7 +154,13 @@ class NoNorm(nn.Module):
         return input_tensor * self.weight + self.bias
 
 
-ACT2FN = {"gelu": gelu, "relu": torch.nn.functional.relu, "swish": swish, "gelu_new": gelu_new, "mish": mish}
+ACT2FN = {
+    "gelu": gelu,
+    "relu": torch.nn.functional.relu,
+    "swish": swish,
+    "gelu_new": gelu_new,
+    "mish": mish,
+}
 NORM2FN = {"layer_norm": torch.nn.LayerNorm, "no_norm": NoNorm}
 
 
@@ -233,12 +239,12 @@ class MobileBertSelfAttention(nn.Module):
         self.query = nn.Linear(config.true_hidden_size, self.all_head_size)
         self.key = nn.Linear(config.true_hidden_size, self.all_head_size)
         self.value = nn.Linear(
-            config.true_hidden_size if config.use_bottleneck_attention else config.hidden_size, self.all_head_size
+            config.true_hidden_size if config.use_bottleneck_attention else config.hidden_size, self.all_head_size,
         )
         self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
 
     def transpose_for_scores(self, x):
-        new_x_shape = x.size()[:-1] + (self.num_attention_heads, self.attention_head_size)
+        new_x_shape = x.size()[:-1] + (self.num_attention_heads, self.attention_head_size,)
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
@@ -311,7 +317,7 @@ class MobileBertAttention(nn.Module):
         if len(heads) == 0:
             return
         heads, index = find_pruneable_heads_and_indices(
-            heads, self.self.num_attention_heads, self.self.attention_head_size, self.pruned_heads
+            heads, self.self.num_attention_heads, self.self.attention_head_size, self.pruned_heads,
         )
 
         # Prune linear layers
@@ -439,9 +445,19 @@ class Bottleneck(nn.Module):
             return (bottlenecked_hidden_states,) * 4
         elif self.key_query_shared_bottleneck:
             shared_attention_input = self.attention(hidden_states)
-            return (shared_attention_input, shared_attention_input, hidden_states, bottlenecked_hidden_states)
+            return (
+                shared_attention_input,
+                shared_attention_input,
+                hidden_states,
+                bottlenecked_hidden_states,
+            )
         else:
-            return (hidden_states, hidden_states, hidden_states, bottlenecked_hidden_states)
+            return (
+                hidden_states,
+                hidden_states,
+                hidden_states,
+                bottlenecked_hidden_states,
+            )
 
 
 class FFNOutput(nn.Module):
@@ -575,7 +591,7 @@ class MobileBertEncoder(nn.Module):
         if return_tuple:
             return tuple(v for v in [hidden_states, all_hidden_states, all_attentions] if v is not None)
         return BaseModelOutput(
-            last_hidden_state=hidden_states, hidden_states=all_hidden_states, attentions=all_attentions
+            last_hidden_state=hidden_states, hidden_states=all_hidden_states, attentions=all_attentions,
         )
 
 
@@ -859,7 +875,7 @@ class MobileBertModel(MobileBertPreTrainedModel):
         # If a 2D ou 3D attention mask is provided for the cross-attention
         # we need to make broadcastabe to [batch_size, num_heads, seq_length, seq_length]
         if self.config.is_decoder and encoder_hidden_states is not None:
-            encoder_batch_size, encoder_sequence_length, _ = encoder_hidden_states.size()
+            (encoder_batch_size, encoder_sequence_length, _,) = encoder_hidden_states.size()
             encoder_hidden_shape = (encoder_batch_size, encoder_sequence_length)
             if encoder_attention_mask is None:
                 encoder_attention_mask = torch.ones(encoder_hidden_shape, device=device)
@@ -875,7 +891,7 @@ class MobileBertModel(MobileBertPreTrainedModel):
         head_mask = self.get_head_mask(head_mask, self.config.num_hidden_layers)
 
         embedding_output = self.embeddings(
-            input_ids=input_ids, position_ids=position_ids, token_type_ids=token_type_ids, inputs_embeds=inputs_embeds
+            input_ids=input_ids, position_ids=position_ids, token_type_ids=token_type_ids, inputs_embeds=inputs_embeds,
         )
         encoder_outputs = self.encoder(
             embedding_output,
@@ -927,10 +943,10 @@ class MobileBertForPreTraining(MobileBertPreTrainedModel):
         input_embeddings = self.get_input_embeddings()
 
         resized_dense = nn.Linear(
-            input_embeddings.num_embeddings, self.config.hidden_size - self.config.embedding_size, bias=False
+            input_embeddings.num_embeddings, self.config.hidden_size - self.config.embedding_size, bias=False,
         )
         kept_data = self.cls.predictions.dense.weight.data[
-            ..., : min(self.cls.predictions.dense.weight.data.shape[1], resized_dense.weight.data.shape[1])
+            ..., : min(self.cls.predictions.dense.weight.data.shape[1], resized_dense.weight.data.shape[1],),
         ]
         resized_dense.weight.data[..., : self.cls.predictions.dense.weight.data.shape[1]] = kept_data
         self.cls.predictions.dense = resized_dense
@@ -1018,7 +1034,9 @@ class MobileBertForPreTraining(MobileBertPreTrainedModel):
         )
 
 
-@add_start_docstrings("""MobileBert Model with a `language modeling` head on top. """, MOBILEBERT_START_DOCSTRING)
+@add_start_docstrings(
+    """MobileBert Model with a `language modeling` head on top. """, MOBILEBERT_START_DOCSTRING,
+)
 class MobileBertForMaskedLM(MobileBertPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
@@ -1041,10 +1059,10 @@ class MobileBertForMaskedLM(MobileBertPreTrainedModel):
         input_embeddings = self.get_input_embeddings()
 
         resized_dense = nn.Linear(
-            input_embeddings.num_embeddings, self.config.hidden_size - self.config.embedding_size, bias=False
+            input_embeddings.num_embeddings, self.config.hidden_size - self.config.embedding_size, bias=False,
         )
         kept_data = self.cls.predictions.dense.weight.data[
-            ..., : min(self.cls.predictions.dense.weight.data.shape[1], resized_dense.weight.data.shape[1])
+            ..., : min(self.cls.predictions.dense.weight.data.shape[1], resized_dense.weight.data.shape[1],),
         ]
         resized_dense.weight.data[..., : self.cls.predictions.dense.weight.data.shape[1]] = kept_data
         self.cls.predictions.dense = resized_dense
@@ -1551,7 +1569,7 @@ class MobileBertForTokenClassification(MobileBertPreTrainedModel):
                 active_loss = attention_mask.view(-1) == 1
                 active_logits = logits.view(-1, self.num_labels)
                 active_labels = torch.where(
-                    active_loss, labels.view(-1), torch.tensor(loss_fct.ignore_index).type_as(labels)
+                    active_loss, labels.view(-1), torch.tensor(loss_fct.ignore_index).type_as(labels),
                 )
                 loss = loss_fct(active_logits, active_labels)
             else:

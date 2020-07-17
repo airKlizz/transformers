@@ -313,10 +313,10 @@ class TFGenerationMixin:
         if num_return_sequences > 1 or num_beams > 1:
             input_ids_len = shape_list(input_ids)[-1]
             input_ids = tf.broadcast_to(
-                tf.expand_dims(input_ids, 1), (batch_size, effective_batch_mult * num_beams, input_ids_len)
+                tf.expand_dims(input_ids, 1), (batch_size, effective_batch_mult * num_beams, input_ids_len),
             )
             attention_mask = tf.broadcast_to(
-                tf.expand_dims(attention_mask, 1), (batch_size, effective_batch_mult * num_beams, input_ids_len)
+                tf.expand_dims(attention_mask, 1), (batch_size, effective_batch_mult * num_beams, input_ids_len),
             )
             input_ids = tf.reshape(
                 input_ids, (effective_batch_size * num_beams, input_ids_len)
@@ -337,11 +337,14 @@ class TFGenerationMixin:
 
             # expand batch_idx to assign correct encoder output for expanded input_ids (due to num_beams > 1 and num_return_sequences > 1)
             expanded_batch_idxs = tf.reshape(
-                tf.repeat(tf.expand_dims(tf.range(batch_size), -1), repeats=num_beams * effective_batch_mult, axis=1),
+                tf.repeat(tf.expand_dims(tf.range(batch_size), -1), repeats=num_beams * effective_batch_mult, axis=1,),
                 shape=(-1,),
             )
             # expand encoder_outputs
-            encoder_outputs = (tf.gather(encoder_outputs[0], expanded_batch_idxs, axis=0), *encoder_outputs[1:])
+            encoder_outputs = (
+                tf.gather(encoder_outputs[0], expanded_batch_idxs, axis=0),
+                *encoder_outputs[1:],
+            )
 
         else:
             encoder_outputs = None
@@ -467,7 +470,7 @@ class TFGenerationMixin:
                     )
 
                 next_token_logits = set_tensor_by_indices_to_value(
-                    next_token_logits, tf.convert_to_tensor(banned_tokens_indices_mask, dtype=tf.bool), -float("inf")
+                    next_token_logits, tf.convert_to_tensor(banned_tokens_indices_mask, dtype=tf.bool), -float("inf"),
                 )
 
             if bad_words_ids is not None:
@@ -481,14 +484,14 @@ class TFGenerationMixin:
                     )
 
                 next_token_logits = set_tensor_by_indices_to_value(
-                    next_token_logits, tf.convert_to_tensor(banned_tokens_indices_mask, dtype=tf.bool), -float("inf")
+                    next_token_logits, tf.convert_to_tensor(banned_tokens_indices_mask, dtype=tf.bool), -float("inf"),
                 )
 
             # set eos token prob to zero if min_length is not reached
             if eos_token_id is not None and cur_len < min_length:
                 # create eos_token_id boolean mask
                 is_token_logit_eos_token = tf.convert_to_tensor(
-                    [True if token is eos_token_id else False for token in range(vocab_size)], dtype=tf.bool
+                    [True if token is eos_token_id else False for token in range(vocab_size)], dtype=tf.bool,
                 )
                 eos_token_indices_mask = tf.broadcast_to(is_token_logit_eos_token, [batch_size, vocab_size])
 
@@ -504,7 +507,7 @@ class TFGenerationMixin:
                 next_token_logits = tf_top_k_top_p_filtering(next_token_logits, top_k=top_k, top_p=top_p)
                 # Sample
                 next_token = tf.squeeze(
-                    tf.random.categorical(next_token_logits, dtype=tf.int32, num_samples=1), axis=1
+                    tf.random.categorical(next_token_logits, dtype=tf.int32, num_samples=1), axis=1,
                 )
             else:
                 # Greedy decoding
@@ -542,7 +545,7 @@ class TFGenerationMixin:
             # extend attention_mask for new generated input if only decoder
             if self.config.is_encoder_decoder is False:
                 attention_mask = tf.concat(
-                    [attention_mask, tf.ones((shape_list(attention_mask)[0], 1), dtype=tf.int32)], axis=-1
+                    [attention_mask, tf.ones((shape_list(attention_mask)[0], 1), dtype=tf.int32),], axis=-1,
                 )
 
         # if there are different sentences lengths in the batch, some batches have to be padded
@@ -558,7 +561,7 @@ class TFGenerationMixin:
                 tf.expand_dims(sent_lengths, -1), [batch_size, max_sent_length]
             )
             broad_casted_range = tf.transpose(
-                tf.broadcast_to(tf.expand_dims(tf.range(max_sent_length), -1), [max_sent_length, batch_size])
+                tf.broadcast_to(tf.expand_dims(tf.range(max_sent_length), -1), [max_sent_length, batch_size],)
             )
 
             decoded = tf.where(broad_casted_range < broad_casted_sent_lengths, input_ids, padding)
@@ -650,7 +653,7 @@ class TFGenerationMixin:
                 num_batch_hypotheses = batch_size * num_beams
 
                 is_token_logit_eos_token = tf.convert_to_tensor(
-                    [True if token is eos_token_id else False for token in range(vocab_size)], dtype=tf.bool
+                    [True if token is eos_token_id else False for token in range(vocab_size)], dtype=tf.bool,
                 )
                 eos_token_indices_mask = tf.broadcast_to(is_token_logit_eos_token, [num_batch_hypotheses, vocab_size])
 
@@ -671,7 +674,7 @@ class TFGenerationMixin:
                     )
 
                 scores = set_tensor_by_indices_to_value(
-                    scores, tf.convert_to_tensor(banned_tokens_indices_mask, dtype=tf.bool), -float("inf")
+                    scores, tf.convert_to_tensor(banned_tokens_indices_mask, dtype=tf.bool), -float("inf"),
                 )
 
             if bad_words_ids is not None:
@@ -685,7 +688,7 @@ class TFGenerationMixin:
                     )
 
                 scores = set_tensor_by_indices_to_value(
-                    scores, tf.convert_to_tensor(banned_tokens_indices_mask, dtype=tf.bool), -float("inf")
+                    scores, tf.convert_to_tensor(banned_tokens_indices_mask, dtype=tf.bool), -float("inf"),
                 )
 
             assert shape_list(scores) == [batch_size * num_beams, vocab_size]
@@ -763,7 +766,7 @@ class TFGenerationMixin:
                         if is_beam_token_worse_than_top_num_beams:
                             continue
                         generated_hyps[batch_idx].add(
-                            tf.identity(input_ids[effective_beam_id]), beam_token_score.numpy()
+                            tf.identity(input_ids[effective_beam_id]), beam_token_score.numpy(),
                         )
                     else:
                         # add next predicted token if it is not eos_token
@@ -805,7 +808,7 @@ class TFGenerationMixin:
             # extend attention_mask for new generated input if only decoder
             if self.config.is_encoder_decoder is False:
                 attention_mask = tf.concat(
-                    [attention_mask, tf.ones((shape_list(attention_mask)[0], 1), dtype=tf.int32)], axis=-1
+                    [attention_mask, tf.ones((shape_list(attention_mask)[0], 1), dtype=tf.int32),], axis=-1,
                 )
 
         # finalize all open beam hypotheses and end to generated hypotheses
@@ -820,7 +823,7 @@ class TFGenerationMixin:
                 assert tf.reduce_all(
                     next_scores[batch_idx, :num_beams] == tf.reshape(beam_scores, (batch_size, num_beams))[batch_idx]
                 ), "If batch_idx is not done, final next scores: {} have to equal to accumulated beam_scores: {}".format(
-                    next_scores[:, :num_beams][batch_idx], tf.reshape(beam_scores, (batch_size, num_beams))[batch_idx]
+                    next_scores[:, :num_beams][batch_idx], tf.reshape(beam_scores, (batch_size, num_beams))[batch_idx],
                 )
 
             # need to add best num_beams hypotheses to generated hyps
@@ -1007,7 +1010,7 @@ def tf_top_k_top_p_filtering(logits, top_k=0, top_p=1.0, filter_value=-float("In
         # Shift the indices to the right to keep also the first token above the threshold
         sorted_indices_to_remove = tf.roll(sorted_indices_to_remove, 1, axis=-1)
         sorted_indices_to_remove = tf.concat(
-            [tf.zeros_like(sorted_indices_to_remove[:, :1]), sorted_indices_to_remove[:, 1:]], -1,
+            [tf.zeros_like(sorted_indices_to_remove[:, :1]), sorted_indices_to_remove[:, 1:],], -1,
         )
         # scatter sorted tensors to original indexing
         indices_to_remove = scatter_values_on_batch_indices(sorted_indices_to_remove, sorted_indices)

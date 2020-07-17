@@ -58,7 +58,7 @@ if __name__ == "__main__":
         help="Path to the TensorFlow checkpoint path.",
     )
     parser.add_argument(
-        "--pytorch_dump_folder_path", default=None, type=str, required=True, help="Path to the output PyTorch model."
+        "--pytorch_dump_folder_path", default=None, type=str, required=True, help="Path to the output PyTorch model.",
     )
     parser.add_argument(
         "--openai_config_file",
@@ -69,5 +69,5 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     convert_openai_checkpoint_to_pytorch(
-        args.openai_checkpoint_folder_path, args.openai_config_file, args.pytorch_dump_folder_path
+        args.openai_checkpoint_folder_path, args.openai_config_file, args.pytorch_dump_folder_path,
     )

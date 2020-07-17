@@ -464,7 +464,9 @@ def add_code_sample_docstrings(*docstr, tokenizer_class=None, checkpoint=None, o
             raise ValueError(f"Docstring can't be built for model {model_class}")
 
         output_doc = _prepare_output_docstrings(output_type, config_class) if output_type is not None else ""
-        built_doc = code_sample.format(model_class=model_class, tokenizer_class=tokenizer_class, checkpoint=checkpoint)
+        built_doc = code_sample.format(
+            model_class=model_class, tokenizer_class=tokenizer_class, checkpoint=checkpoint,
+        )
         fn.__doc__ = (fn.__doc__ or "") + "".join(docstr) + output_doc + built_doc
         return fn
 
@@ -662,7 +664,9 @@ def cached_path(
     return output_path
 
 
-def http_get(url, temp_file, proxies=None, resume_size=0, user_agent: Union[Dict, str, None] = None):
+def http_get(
+    url, temp_file, proxies=None, resume_size=0, user_agent: Union[Dict, str, None] = None,
+):
     ua = "transformers/{}; python/{}".format(__version__, sys.version.split()[0])
     if is_torch_available():
         ua += "; torch/{}".format(torch.__version__)
@@ -793,9 +797,13 @@ def get_from_cache(
         # Download to temporary file, then copy to cache dir once finished.
         # Otherwise you get corrupt cache entries if the download gets interrupted.
         with temp_file_manager() as temp_file:
-            logger.info("%s not found in cache or force_download set to True, downloading to %s", url, temp_file.name)
+            logger.info(
+                "%s not found in cache or force_download set to True, downloading to %s", url, temp_file.name,
+            )
 
-            http_get(url, temp_file, proxies=proxies, resume_size=resume_size, user_agent=user_agent)
+            http_get(
+                url, temp_file, proxies=proxies, resume_size=resume_size, user_agent=user_agent,
+            )
 
         logger.info("storing %s in cache at %s", url, cache_path)
         os.replace(temp_file.name, cache_path)

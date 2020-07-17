@@ -9,7 +9,7 @@ from transformers import BertConfig, DPRConfig, DPRContextEncoder, DPRQuestionEn
 
 
 CheckpointState = collections.namedtuple(
-    "CheckpointState", ["model_dict", "optimizer_dict", "scheduler_dict", "offset", "epoch", "encoder_params"]
+    "CheckpointState", ["model_dict", "optimizer_dict", "scheduler_dict", "offset", "epoch", "encoder_params",],
 )
 
 
@@ -100,14 +100,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # Required parameters
     parser.add_argument(
-        "--type", type=str, help="Type of the component to convert: 'ctx_encoder', 'question_encoder' or 'reader'."
+        "--type", type=str, help="Type of the component to convert: 'ctx_encoder', 'question_encoder' or 'reader'.",
     )
     parser.add_argument(
         "--src",
         type=str,
         help="Path to the dpr checkpoint file. They can be downloaded from the official DPR repo https://github.com/facebookresearch/DPR. Note that in the official repo, both encoders are stored in the 'retriever' checkpoints.",
     )
-    parser.add_argument("--dest", type=str, default=None, help="Path to the output PyTorch model directory.")
+    parser.add_argument(
+        "--dest", type=str, default=None, help="Path to the output PyTorch model directory.",
+    )
     args = parser.parse_args()
 
     src_file = Path(args.src)

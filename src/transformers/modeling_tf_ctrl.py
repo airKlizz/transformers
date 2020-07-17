@@ -51,7 +51,7 @@ def angle_defn(pos, i, d_model_size):
 
 def positional_encoding(position, d_model_size):
     # create the sinusoidal pattern for the positional encoding
-    angle_rads = angle_defn(np.arange(position)[:, np.newaxis], np.arange(d_model_size)[np.newaxis, :], d_model_size)
+    angle_rads = angle_defn(np.arange(position)[:, np.newaxis], np.arange(d_model_size)[np.newaxis, :], d_model_size,)
 
     sines = np.sin(angle_rads[:, 0::2])
     cosines = np.cos(angle_rads[:, 1::2])
@@ -105,7 +105,7 @@ class TFMultiHeadAttention(tf.keras.layers.Layer):
         return tf.transpose(x, perm=[0, 2, 1, 3])
 
     def call(self, inputs, training=False):
-        v, k, q, mask, layer_past, attention_mask, head_mask, use_cache, output_attentions = inputs
+        (v, k, q, mask, layer_past, attention_mask, head_mask, use_cache, output_attentions,) = inputs
         batch_size = shape_list(q)[0]
 
         q = self.Wq(q)
@@ -143,7 +143,7 @@ class TFMultiHeadAttention(tf.keras.layers.Layer):
 
 def point_wise_feed_forward_network(d_model_size, dff, name=""):
     return tf.keras.Sequential(
-        [tf.keras.layers.Dense(dff, activation="relu", name="0"), tf.keras.layers.Dense(d_model_size, name="2")],
+        [tf.keras.layers.Dense(dff, activation="relu", name="0"), tf.keras.layers.Dense(d_model_size, name="2"),],
         name="ffn",
     )
 
@@ -162,10 +162,10 @@ class TFEncoderLayer(tf.keras.layers.Layer):
         self.dropout2 = tf.keras.layers.Dropout(rate)
 
     def call(self, inputs, training=False):
-        x, mask, layer_past, attention_mask, head_mask, use_cache, output_attentions = inputs
+        (x, mask, layer_past, attention_mask, head_mask, use_cache, output_attentions,) = inputs
         normed = self.layernorm1(x)
         attn_outputs = self.multi_head_attention(
-            [normed, normed, normed, mask, layer_past, attention_mask, head_mask, use_cache, output_attentions],
+            [normed, normed, normed, mask, layer_past, attention_mask, head_mask, use_cache, output_attentions,],
             training=training,
         )
         attn_output = attn_outputs[0]
@@ -197,7 +197,7 @@ class TFCTRLMainLayer(tf.keras.layers.Layer):
         self.pos_encoding = positional_encoding(config.n_positions, self.d_model_size)
 
         self.w = TFSharedEmbeddings(
-            config.vocab_size, config.n_embd, initializer_range=config.initializer_range, name="w"
+            config.vocab_size, config.n_embd, initializer_range=config.initializer_range, name="w",
         )
 
         self.dropout = tf.keras.layers.Dropout(config.embd_pdrop)
@@ -363,7 +363,7 @@ class TFCTRLMainLayer(tf.keras.layers.Layer):
             if cast_bool_to_primitive(output_hidden_states) is True:
                 all_hidden_states = all_hidden_states + (tf.reshape(hidden_states, output_shape),)
             outputs = h(
-                [hidden_states, mask, layer_past, attention_mask, head_mask[i], use_cache, output_attentions],
+                [hidden_states, mask, layer_past, attention_mask, head_mask[i], use_cache, output_attentions,],
                 training=training,
             )
             hidden_states, present = outputs[:2]

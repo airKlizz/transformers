@@ -455,7 +455,7 @@ class TFPreTrainedModel(tf.keras.Model, TFModelUtilsMixin, TFGenerationMixin):
                 else:
                     raise EnvironmentError(
                         "Error no file named {} found in directory {} or `from_pt` set to False".format(
-                            [WEIGHTS_NAME, TF2_WEIGHTS_NAME], pretrained_model_name_or_path
+                            [WEIGHTS_NAME, TF2_WEIGHTS_NAME], pretrained_model_name_or_path,
                         )
                     )
             elif os.path.isfile(pretrained_model_name_or_path) or is_remote_url(pretrained_model_name_or_path):
@@ -555,7 +555,11 @@ class TFPreTrainedModel(tf.keras.Model, TFModelUtilsMixin, TFGenerationMixin):
                 "Error(s) in loading weights for {}:\n\t{}".format(model.__class__.__name__, "\n\t".join(error_msgs))
             )
         if output_loading_info:
-            loading_info = {"missing_keys": missing_keys, "unexpected_keys": unexpected_keys, "error_msgs": error_msgs}
+            loading_info = {
+                "missing_keys": missing_keys,
+                "unexpected_keys": unexpected_keys,
+                "error_msgs": error_msgs,
+            }
             return model, loading_info
 
         return model
@@ -573,7 +577,7 @@ class TFConv1D(tf.keras.layers.Layer):
 
     def build(self, input_shape):
         self.weight = self.add_weight(
-            "weight", shape=[self.nx, self.nf], initializer=get_initializer(self.initializer_range)
+            "weight", shape=[self.nx, self.nf], initializer=get_initializer(self.initializer_range),
         )
         self.bias = self.add_weight("bias", shape=[1, self.nf], initializer=tf.zeros_initializer())
 
@@ -604,7 +608,7 @@ class TFSharedEmbeddings(tf.keras.layers.Layer):
             https://github.com/tensorflow/models/blob/a009f4fb9d2fc4949e32192a944688925ef78659/official/transformer/v2/embedding_layer.py#L24
         """
         self.weight = self.add_weight(
-            "weight", shape=[self.vocab_size, self.hidden_size], initializer=get_initializer(self.initializer_range)
+            "weight", shape=[self.vocab_size, self.hidden_size], initializer=get_initializer(self.initializer_range),
         )
         super().build(input_shape)
 
@@ -692,7 +696,7 @@ class TFSequenceSummary(tf.keras.layers.Layer):
             else:
                 num_classes = config.hidden_size
             self.summary = tf.keras.layers.Dense(
-                num_classes, kernel_initializer=get_initializer(initializer_range), name="summary"
+                num_classes, kernel_initializer=get_initializer(initializer_range), name="summary",
             )
 
         self.has_activation = hasattr(config, "summary_activation") and config.summary_activation == "tanh"

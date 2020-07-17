@@ -191,7 +191,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # Required parameters
     parser.add_argument(
-        "--trax_model_pkl_path", default=None, type=str, required=True, help="Path to the TensorFlow checkpoint path."
+        "--trax_model_pkl_path", default=None, type=str, required=True, help="Path to the TensorFlow checkpoint path.",
     )
     parser.add_argument(
         "--config_file",
@@ -202,7 +202,7 @@ if __name__ == "__main__":
         "This specifies the model architecture.",
     )
     parser.add_argument(
-        "--pytorch_dump_path", default=None, type=str, required=True, help="Path to the output PyTorch model."
+        "--pytorch_dump_path", default=None, type=str, required=True, help="Path to the output PyTorch model.",
     )
     args = parser.parse_args()
     convert_trax_checkpoint_to_pytorch(args.trax_model_pkl_path, args.config_file, args.pytorch_dump_path)

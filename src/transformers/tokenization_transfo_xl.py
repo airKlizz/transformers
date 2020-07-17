@@ -46,7 +46,10 @@ if is_torch_available():
 logger = logging.getLogger(__name__)
 
 VOCAB_FILES_NAMES = {"pretrained_vocab_file": "vocab.bin", "vocab_file": "vocab.txt"}
-VOCAB_FILES_NAMES_FAST = {"pretrained_vocab_file": "vocab.json", "vocab_file": "vocab.json"}
+VOCAB_FILES_NAMES_FAST = {
+    "pretrained_vocab_file": "vocab.json",
+    "vocab_file": "vocab.json",
+}
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "pretrained_vocab_file": {
@@ -99,7 +102,7 @@ class TransfoXLTokenizer(PreTrainedTokenizer):
         **kwargs
     ):
         super().__init__(
-            unk_token=unk_token, eos_token=eos_token, additional_special_tokens=additional_special_tokens, **kwargs
+            unk_token=unk_token, eos_token=eos_token, additional_special_tokens=additional_special_tokens, **kwargs,
         )
 
         if never_split is None:
@@ -414,7 +417,7 @@ class _TransfoXLDelimiterLookupTokenizer(BaseTokenizer):
 
         if add_double_eos:
             tokenizer.post_processor = BertProcessing(
-                (eos_token, tokenizer.token_to_id(eos_token)), (eos_token, tokenizer.token_to_id(eos_token))
+                (eos_token, tokenizer.token_to_id(eos_token)), (eos_token, tokenizer.token_to_id(eos_token)),
             )
 
         parameters = {

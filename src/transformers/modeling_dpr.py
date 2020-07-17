@@ -466,7 +466,7 @@ class DPRContextEncoder(DPRPretrainedContextEncoder):
         if return_tuple:
             return outputs[1:]
         return DPRContextEncoderOutput(
-            pooler_output=outputs.pooler_output, hidden_states=outputs.hidden_states, attentions=outputs.attentions
+            pooler_output=outputs.pooler_output, hidden_states=outputs.hidden_states, attentions=outputs.attentions,
         )
 
 
@@ -543,7 +543,7 @@ class DPRQuestionEncoder(DPRPretrainedQuestionEncoder):
         if return_tuple:
             return outputs[1:]
         return DPRQuestionEncoderOutput(
-            pooler_output=outputs.pooler_output, hidden_states=outputs.hidden_states, attentions=outputs.attentions
+            pooler_output=outputs.pooler_output, hidden_states=outputs.hidden_states, attentions=outputs.attentions,
         )
 
 

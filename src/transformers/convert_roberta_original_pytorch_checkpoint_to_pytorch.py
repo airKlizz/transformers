@@ -40,7 +40,7 @@ SAMPLE_TEXT = "Hello world! cécé herlolip"
 
 
 def convert_roberta_checkpoint_to_pytorch(
-    roberta_checkpoint_path: str, pytorch_dump_folder_path: str, classification_head: bool
+    roberta_checkpoint_path: str, pytorch_dump_folder_path: str, classification_head: bool,
 ):
     """
     Copy/paste/tweak roberta's weights to our BERT structure.
@@ -158,15 +158,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # Required parameters
     parser.add_argument(
-        "--roberta_checkpoint_path", default=None, type=str, required=True, help="Path the official PyTorch dump."
+        "--roberta_checkpoint_path", default=None, type=str, required=True, help="Path the official PyTorch dump.",
     )
     parser.add_argument(
-        "--pytorch_dump_folder_path", default=None, type=str, required=True, help="Path to the output PyTorch model."
+        "--pytorch_dump_folder_path", default=None, type=str, required=True, help="Path to the output PyTorch model.",
     )
     parser.add_argument(
-        "--classification_head", action="store_true", help="Whether to convert a final classification head."
+        "--classification_head", action="store_true", help="Whether to convert a final classification head.",
     )
     args = parser.parse_args()
     convert_roberta_checkpoint_to_pytorch(
-        args.roberta_checkpoint_path, args.pytorch_dump_folder_path, args.classification_head
+        args.roberta_checkpoint_path, args.pytorch_dump_folder_path, args.classification_head,
     )

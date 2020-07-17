@@ -67,7 +67,9 @@ def build_tf_to_pytorch_map(model, config):
             else:
                 raise NotImplementedError
                 # I don't think this is implemented in the TF code
-                tf_to_pt_map.update({layer_str + "lookup_table": out_l.weight, layer_str + "b": out_l.bias})
+                tf_to_pt_map.update(
+                    {layer_str + "lookup_table": out_l.weight, layer_str + "b": out_l.bias,}
+                )
             if not tie_proj:
                 tf_to_pt_map.update({layer_str + "proj": proj_l})
         # Now load the rest of the transformer
@@ -378,10 +380,12 @@ class RelPartialLearnableDecoderLayer(nn.Module):
             n_head, d_model, d_head, dropout, layer_norm_epsilon=layer_norm_epsilon, **kwargs
         )
         self.pos_ff = PositionwiseFF(
-            d_model, d_inner, dropout, pre_lnorm=kwargs.get("pre_lnorm"), layer_norm_epsilon=layer_norm_epsilon
+            d_model, d_inner, dropout, pre_lnorm=kwargs.get("pre_lnorm"), layer_norm_epsilon=layer_norm_epsilon,
         )
 
-    def forward(self, dec_inp, r, dec_attn_mask=None, mems=None, head_mask=None, output_attentions=False):
+    def forward(
+        self, dec_inp, r, dec_attn_mask=None, mems=None, head_mask=None, output_attentions=False,
+    ):
 
         attn_outputs = self.dec_attn(
             dec_inp, r, attn_mask=dec_attn_mask, mems=mems, head_mask=head_mask, output_attentions=output_attentions,
@@ -718,7 +722,7 @@ class TransfoXLModel(TransfoXLPreTrainedModel):
         self.d_head = config.d_head
 
         self.word_emb = AdaptiveEmbedding(
-            config.vocab_size, config.d_embed, config.d_model, config.cutoffs, div_val=config.div_val
+            config.vocab_size, config.d_embed, config.d_model, config.cutoffs, div_val=config.div_val,
         )
 
         self.drop = nn.Dropout(config.dropout)
@@ -792,7 +796,7 @@ class TransfoXLModel(TransfoXLPreTrainedModel):
             mems = []
             param = next(self.parameters())
             for i in range(self.n_layer):
-                empty = torch.zeros(self.mem_len, bsz, self.config.d_model, dtype=param.dtype, device=param.device)
+                empty = torch.zeros(self.mem_len, bsz, self.config.d_model, dtype=param.dtype, device=param.device,)
                 mems.append(empty)
 
             return mems
@@ -967,7 +971,7 @@ class TransfoXLLMHeadModel(TransfoXLPreTrainedModel):
         ), "Sampling from the softmax is not implemented yet. Please look at issue: #3310: https://github.com/huggingface/transformers/issues/3310"
 
         self.crit = ProjectedAdaptiveLogSoftmax(
-            config.vocab_size, config.d_embed, config.d_model, config.cutoffs, div_val=config.div_val
+            config.vocab_size, config.d_embed, config.d_model, config.cutoffs, div_val=config.div_val,
         )
 
         self.init_weights()

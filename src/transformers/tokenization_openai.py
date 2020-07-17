@@ -67,7 +67,7 @@ def text_standardize(text):
     text = text.replace("―", "-")
     text = text.replace("…", "...")
     text = text.replace("´", "'")
-    text = re.sub(r"""(-+|~+|!+|"+|;+|\?+|\++|,+|\)+|\(+|\\+|\/+|\*+|\[+|\]+|}+|{+|\|+|_+)""", r" \1 ", text)
+    text = re.sub(r"""(-+|~+|!+|"+|;+|\?+|\++|,+|\)+|\(+|\\+|\/+|\*+|\[+|\]+|}+|{+|\|+|_+)""", r" \1 ", text,)
     text = re.sub(r"\s*\n\s*", " \n ", text)
     text = re.sub(r"[^\S\n]+", " ", text)
     return text.strip()
@@ -267,6 +267,6 @@ class OpenAIGPTTokenizerFast(PreTrainedTokenizerFast):
     def __init__(self, vocab_file, merges_file, unk_token="<unk>", **kwargs):
         kwargs.setdefault("unk_token", unk_token)
         super().__init__(
-            CharBPETokenizer(vocab_file=vocab_file, merges_file=merges_file, unk_token=unk_token, lowercase=True),
+            CharBPETokenizer(vocab_file=vocab_file, merges_file=merges_file, unk_token=unk_token, lowercase=True,),
             **kwargs,
         )

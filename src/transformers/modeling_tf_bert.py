@@ -227,13 +227,13 @@ class TFBertSelfAttention(tf.keras.layers.Layer):
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
         self.query = tf.keras.layers.Dense(
-            self.all_head_size, kernel_initializer=get_initializer(config.initializer_range), name="query"
+            self.all_head_size, kernel_initializer=get_initializer(config.initializer_range), name="query",
         )
         self.key = tf.keras.layers.Dense(
-            self.all_head_size, kernel_initializer=get_initializer(config.initializer_range), name="key"
+            self.all_head_size, kernel_initializer=get_initializer(config.initializer_range), name="key",
         )
         self.value = tf.keras.layers.Dense(
-            self.all_head_size, kernel_initializer=get_initializer(config.initializer_range), name="value"
+            self.all_head_size, kernel_initializer=get_initializer(config.initializer_range), name="value",
         )
 
         self.dropout = tf.keras.layers.Dropout(config.attention_probs_dropout_prob)
@@ -294,7 +294,7 @@ class TFBertSelfOutput(tf.keras.layers.Layer):
     def __init__(self, config, **kwargs):
         super().__init__(**kwargs)
         self.dense = tf.keras.layers.Dense(
-            config.hidden_size, kernel_initializer=get_initializer(config.initializer_range), name="dense"
+            config.hidden_size, kernel_initializer=get_initializer(config.initializer_range), name="dense",
         )
         self.LayerNorm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="LayerNorm")
         self.dropout = tf.keras.layers.Dropout(config.hidden_dropout_prob)
@@ -321,7 +321,7 @@ class TFBertAttention(tf.keras.layers.Layer):
         input_tensor, attention_mask, head_mask, output_attentions = inputs
 
         self_outputs = self.self_attention(
-            [input_tensor, attention_mask, head_mask, output_attentions], training=training
+            [input_tensor, attention_mask, head_mask, output_attentions], training=training,
         )
         attention_output = self.dense_output([self_outputs[0], input_tensor], training=training)
         outputs = (attention_output,) + self_outputs[1:]  # add attentions if we output them
@@ -332,7 +332,7 @@ class TFBertIntermediate(tf.keras.layers.Layer):
     def __init__(self, config, **kwargs):
         super().__init__(**kwargs)
         self.dense = tf.keras.layers.Dense(
-            config.intermediate_size, kernel_initializer=get_initializer(config.initializer_range), name="dense"
+            config.intermediate_size, kernel_initializer=get_initializer(config.initializer_range), name="dense",
         )
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
@@ -349,7 +349,7 @@ class TFBertOutput(tf.keras.layers.Layer):
     def __init__(self, config, **kwargs):
         super().__init__(**kwargs)
         self.dense = tf.keras.layers.Dense(
-            config.hidden_size, kernel_initializer=get_initializer(config.initializer_range), name="dense"
+            config.hidden_size, kernel_initializer=get_initializer(config.initializer_range), name="dense",
         )
         self.LayerNorm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="LayerNorm")
         self.dropout = tf.keras.layers.Dropout(config.hidden_dropout_prob)
@@ -374,7 +374,7 @@ class TFBertLayer(tf.keras.layers.Layer):
         hidden_states, attention_mask, head_mask, output_attentions = inputs
 
         attention_outputs = self.attention(
-            [hidden_states, attention_mask, head_mask, output_attentions], training=training
+            [hidden_states, attention_mask, head_mask, output_attentions], training=training,
         )
         attention_output = attention_outputs[0]
         intermediate_output = self.intermediate(attention_output)
@@ -389,7 +389,7 @@ class TFBertEncoder(tf.keras.layers.Layer):
         self.layer = [TFBertLayer(config, name="layer_._{}".format(i)) for i in range(config.num_hidden_layers)]
 
     def call(self, inputs, training=False):
-        hidden_states, attention_mask, head_mask, output_attentions, output_hidden_states = inputs
+        (hidden_states, attention_mask, head_mask, output_attentions, output_hidden_states,) = inputs
 
         all_hidden_states = ()
         all_attentions = ()
@@ -398,7 +398,7 @@ class TFBertEncoder(tf.keras.layers.Layer):
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
             layer_outputs = layer_module(
-                [hidden_states, attention_mask, head_mask[i], output_attentions], training=training
+                [hidden_states, attention_mask, head_mask[i], output_attentions], training=training,
             )
             hidden_states = layer_outputs[0]
 
@@ -439,7 +439,7 @@ class TFBertPredictionHeadTransform(tf.keras.layers.Layer):
     def __init__(self, config, **kwargs):
         super().__init__(**kwargs)
         self.dense = tf.keras.layers.Dense(
-            config.hidden_size, kernel_initializer=get_initializer(config.initializer_range), name="dense"
+            config.hidden_size, kernel_initializer=get_initializer(config.initializer_range), name="dense",
         )
         if isinstance(config.hidden_act, str):
             self.transform_act_fn = ACT2FN[config.hidden_act]
@@ -489,7 +489,7 @@ class TFBertNSPHead(tf.keras.layers.Layer):
     def __init__(self, config, **kwargs):
         super().__init__(**kwargs)
         self.seq_relationship = tf.keras.layers.Dense(
-            2, kernel_initializer=get_initializer(config.initializer_range), name="seq_relationship"
+            2, kernel_initializer=get_initializer(config.initializer_range), name="seq_relationship",
         )
 
     def call(self, pooled_output):
@@ -607,7 +607,7 @@ class TFBertMainLayer(tf.keras.layers.Layer):
 
         embedding_output = self.embeddings([input_ids, position_ids, token_type_ids, inputs_embeds], training=training)
         encoder_outputs = self.encoder(
-            [embedding_output, extended_attention_mask, head_mask, output_attentions, output_hidden_states],
+            [embedding_output, extended_attention_mask, head_mask, output_attentions, output_hidden_states,],
             training=training,
         )
 
@@ -1033,7 +1033,7 @@ class TFBertForSequenceClassification(TFBertPreTrainedModel, TFSequenceClassific
         self.bert = TFBertMainLayer(config, name="bert")
         self.dropout = tf.keras.layers.Dropout(config.hidden_dropout_prob)
         self.classifier = tf.keras.layers.Dense(
-            config.num_labels, kernel_initializer=get_initializer(config.initializer_range), name="classifier"
+            config.num_labels, kernel_initializer=get_initializer(config.initializer_range), name="classifier",
         )
 
     @add_start_docstrings_to_callable(BERT_INPUTS_DOCSTRING)
@@ -1119,7 +1119,7 @@ class TFBertForMultipleChoice(TFBertPreTrainedModel, TFMultipleChoiceLoss):
         self.bert = TFBertMainLayer(config, name="bert")
         self.dropout = tf.keras.layers.Dropout(config.hidden_dropout_prob)
         self.classifier = tf.keras.layers.Dense(
-            1, kernel_initializer=get_initializer(config.initializer_range), name="classifier"
+            1, kernel_initializer=get_initializer(config.initializer_range), name="classifier",
         )
 
     @property
@@ -1253,7 +1253,7 @@ class TFBertForTokenClassification(TFBertPreTrainedModel, TFTokenClassificationL
         self.bert = TFBertMainLayer(config, name="bert")
         self.dropout = tf.keras.layers.Dropout(config.hidden_dropout_prob)
         self.classifier = tf.keras.layers.Dense(
-            config.num_labels, kernel_initializer=get_initializer(config.initializer_range), name="classifier"
+            config.num_labels, kernel_initializer=get_initializer(config.initializer_range), name="classifier",
         )
 
     @add_start_docstrings_to_callable(BERT_INPUTS_DOCSTRING)
@@ -1337,7 +1337,7 @@ class TFBertForQuestionAnswering(TFBertPreTrainedModel, TFQuestionAnsweringLoss)
 
         self.bert = TFBertMainLayer(config, name="bert")
         self.qa_outputs = tf.keras.layers.Dense(
-            config.num_labels, kernel_initializer=get_initializer(config.initializer_range), name="qa_outputs"
+            config.num_labels, kernel_initializer=get_initializer(config.initializer_range), name="qa_outputs",
         )
 
     @add_start_docstrings_to_callable(BERT_INPUTS_DOCSTRING)

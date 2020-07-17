@@ -120,7 +120,7 @@ class GenerationMixin:
         attention_mask: Optional[torch.LongTensor] = None,
         decoder_start_token_id: Optional[int] = None,
         use_cache: Optional[bool] = None,
-        **model_specific_kwargs
+        **model_specific_kwargs,
     ) -> torch.LongTensor:
         r""" Generates sequences for models with a LM head. The method currently supports greedy decoding, beam-search decoding, sampling with temperature, sampling with top-k or nucleus sampling.
 
@@ -422,7 +422,10 @@ class GenerationMixin:
                 .to(input_ids.device)
             )
             # expand encoder_outputs
-            encoder_outputs = (encoder_outputs[0].index_select(0, expanded_batch_idxs), *encoder_outputs[1:])
+            encoder_outputs = (
+                encoder_outputs[0].index_select(0, expanded_batch_idxs),
+                *encoder_outputs[1:],
+            )
 
         else:
             encoder_outputs = None
@@ -514,7 +517,7 @@ class GenerationMixin:
 
         while cur_len < max_length:
             model_inputs = self.prepare_inputs_for_generation(
-                input_ids, past=past, attention_mask=attention_mask, use_cache=use_cache, **model_specific_kwargs
+                input_ids, past=past, attention_mask=attention_mask, use_cache=use_cache, **model_specific_kwargs,
             )
 
             outputs = self(**model_inputs)
@@ -577,7 +580,7 @@ class GenerationMixin:
             # extend attention_mask for new generated input if only decoder
             if self.config.is_encoder_decoder is False:
                 attention_mask = torch.cat(
-                    [attention_mask, attention_mask.new_ones((attention_mask.shape[0], 1))], dim=-1
+                    [attention_mask, attention_mask.new_ones((attention_mask.shape[0], 1)),], dim=-1,
                 )
 
         return input_ids
@@ -633,7 +636,7 @@ class GenerationMixin:
 
         while cur_len < max_length:
             model_inputs = self.prepare_inputs_for_generation(
-                input_ids, past=past, attention_mask=attention_mask, use_cache=use_cache, **model_specific_kwargs
+                input_ids, past=past, attention_mask=attention_mask, use_cache=use_cache, **model_specific_kwargs,
             )
             outputs = self(**model_inputs)  # (batch_size * num_beams, cur_len, vocab_size)
             next_token_logits = outputs[0][:, -1, :]  # (batch_size * num_beams, vocab_size)
@@ -663,7 +666,7 @@ class GenerationMixin:
                 num_beams=num_beams,
             )
 
-            assert scores.shape == (batch_size * num_beams, vocab_size), "Shapes of scores: {} != {}".format(
+            assert scores.shape == (batch_size * num_beams, vocab_size,), "Shapes of scores: {} != {}".format(
                 scores.shape, (batch_size * num_beams, vocab_size)
             )
 
@@ -780,7 +783,7 @@ class GenerationMixin:
             # extend attention_mask for new generated input if only decoder
             if self.config.is_encoder_decoder is False:
                 attention_mask = torch.cat(
-                    [attention_mask, attention_mask.new_ones((attention_mask.shape[0], 1))], dim=-1
+                    [attention_mask, attention_mask.new_ones((attention_mask.shape[0], 1)),], dim=-1,
                 )
 
         # finalize all open beam hypotheses and add to generated hypotheses

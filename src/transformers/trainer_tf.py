@@ -57,7 +57,7 @@ class TFTrainer:
     compute_metrics: Optional[Callable[[EvalPrediction], Dict]] = None
     prediction_loss_only: bool
     tb_writer: Optional[tf.summary.SummaryWriter] = None
-    optimizers: Tuple[tf.keras.optimizers.Optimizer, tf.keras.optimizers.schedules.LearningRateSchedule] = None
+    optimizers: Tuple[tf.keras.optimizers.Optimizer, tf.keras.optimizers.schedules.LearningRateSchedule,] = None
     global_step: Optional[int] = None
     epoch_logging: Optional[float] = None
 
@@ -70,7 +70,7 @@ class TFTrainer:
         compute_metrics: Optional[Callable[[EvalPrediction], Dict]] = None,
         prediction_loss_only=False,
         tb_writer: Optional[tf.summary.SummaryWriter] = None,
-        optimizers: Tuple[tf.keras.optimizers.Optimizer, tf.keras.optimizers.schedules.LearningRateSchedule] = None,
+        optimizers: Tuple[tf.keras.optimizers.Optimizer, tf.keras.optimizers.schedules.LearningRateSchedule,] = None,
     ):
         self.model = model
         self.args = args
@@ -115,7 +115,7 @@ class TFTrainer:
         ds = (
             self.train_dataset.cache()
             .shuffle(self.num_train_examples)
-            .batch(self.args.train_batch_size, drop_remainder=self.args.dataloader_drop_last)
+            .batch(self.args.train_batch_size, drop_remainder=self.args.dataloader_drop_last,)
             .prefetch(tf.data.experimental.AUTOTUNE)
         )
 
@@ -157,7 +157,9 @@ class TFTrainer:
 
     def get_optimizers(
         self, num_training_steps: int,
-    ) -> Tuple[tf.keras.optimizers.Optimizer, tf.keras.optimizers.schedules.LearningRateSchedule]:
+    ) -> Tuple[
+        tf.keras.optimizers.Optimizer, tf.keras.optimizers.schedules.LearningRateSchedule,
+    ]:
         """
         Setup the optimizer and the learning rate scheduler.
 
@@ -215,7 +217,7 @@ class TFTrainer:
         return reduced_loss, per_replica_logits
 
     def _prediction_loop(
-        self, dataset: tf.data.Dataset, description: str, prediction_loss_only: Optional[bool] = None
+        self, dataset: tf.data.Dataset, description: str, prediction_loss_only: Optional[bool] = None,
     ) -> PredictionOutput:
         """
         Prediction/evaluation loop, shared by `evaluate()` and `predict()`.
@@ -373,9 +375,12 @@ class TFTrainer:
                 logger.info("  Continuing training from checkpoint, will skip to saved global_step")
                 logger.info("  Continuing training from epoch %d", epochs_trained)
                 logger.info("  Continuing training from global step %d", self.global_step)
-                logger.info("  Will skip the first %d steps in the first epoch", steps_trained_in_current_epoch)
                 logger.info(
-                    "Checkpoint file %s found and restoring from checkpoint", self.model.ckpt_manager.latest_checkpoint
+                    "  Will skip the first %d steps in the first epoch", steps_trained_in_current_epoch,
+                )
+                logger.info(
+                    "Checkpoint file %s found and restoring from checkpoint",
+                    self.model.ckpt_manager.latest_checkpoint,
                 )
 
                 ckpt.restore(self.model.ckpt_manager.latest_checkpoint).expect_partial()
@@ -398,9 +403,11 @@ class TFTrainer:
         logger.info("***** Running training *****")
         logger.info("  Num examples = %d", self.num_train_examples)
         logger.info("  Num Epochs = %d", epochs)
-        logger.info("  Instantaneous batch size per device = %d", self.args.per_device_train_batch_size)
         logger.info(
-            "  Total train batch size (w. parallel, distributed & accumulation) = %d", self.args.train_batch_size
+            "  Instantaneous batch size per device = %d", self.args.per_device_train_batch_size,
+        )
+        logger.info(
+            "  Total train batch size (w. parallel, distributed & accumulation) = %d", self.args.train_batch_size,
         )
         logger.info("  Gradient Accumulation steps = %d", self.args.gradient_accumulation_steps)
         logger.info("  Total optimization steps = %d", t_total)
@@ -423,7 +430,7 @@ class TFTrainer:
                 if self.global_step == 1 and self.args.debug:
                     with self.tb_writer.as_default():
                         tf.summary.trace_export(
-                            name="training", step=self.global_step, profiler_outdir=self.args.logging_dir
+                            name="training", step=self.global_step, profiler_outdir=self.args.logging_dir,
                         )
 
                 if self.args.evaluate_during_training and self.global_step % self.args.eval_steps == 0:

@@ -176,7 +176,7 @@ class TFFlaubertMainLayer(TFXLMMainLayer):
 
         if lengths is None:
             if input_ids is not None:
-                lengths = tf.reduce_sum(tf.cast(tf.not_equal(input_ids, self.pad_index), dtype=tf.int32), axis=1)
+                lengths = tf.reduce_sum(tf.cast(tf.not_equal(input_ids, self.pad_index), dtype=tf.int32), axis=1,)
             else:
                 lengths = tf.convert_to_tensor([slen] * bs, tf.int32)
         # mask = input_ids != self.pad_index
@@ -266,7 +266,7 @@ class TFFlaubertMainLayer(TFXLMMainLayer):
             else:
                 tensor_normalized = self.layer_norm1[i](tensor)
                 attn_outputs = self.attentions[i](
-                    [tensor_normalized, attn_mask, None, cache, head_mask[i]], training=training
+                    [tensor_normalized, attn_mask, None, cache, head_mask[i]], training=training,
                 )
                 attn = attn_outputs[0]
                 if output_attentions:

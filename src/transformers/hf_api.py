@@ -147,7 +147,7 @@ class HfApi:
         d = r.json()
         return PresignedUrl(**d)
 
-    def presign_and_upload(self, token: str, filename: str, filepath: str, organization: Optional[str] = None) -> str:
+    def presign_and_upload(self, token: str, filename: str, filepath: str, organization: Optional[str] = None,) -> str:
         """
         Get a presigned url, then upload file to S3.
 

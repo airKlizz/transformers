@@ -202,7 +202,7 @@ class TrainingArguments:
     local_rank: int = field(default=-1, metadata={"help": "For distributed training: local_rank"})
 
     tpu_num_cores: Optional[int] = field(
-        default=None, metadata={"help": "TPU: Number of TPU cores (automatically passed by launcher script)"}
+        default=None, metadata={"help": "TPU: Number of TPU cores (automatically passed by launcher script)"},
     )
     tpu_metrics_debug: bool = field(
         default=False,
@@ -211,7 +211,7 @@ class TrainingArguments:
     debug: bool = field(default=False, metadata={"help": "Whether to print debug metrics on TPU"})
 
     dataloader_drop_last: bool = field(
-        default=False, metadata={"help": "Drop the last incomplete batch if it is not divisible by the batch size."}
+        default=False, metadata={"help": "Drop the last incomplete batch if it is not divisible by the batch size."},
     )
     eval_steps: int = field(default=1000, metadata={"help": "Run an evaluation every X steps."})
 

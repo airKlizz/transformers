@@ -97,7 +97,7 @@ def get_masks(slen, lengths, causal, padding_mask=None, dtype=tf.float32):
     # attention mask is the same as mask, or triangular inferior attention (causal)
     if causal:
         attn_mask = tf.less_equal(
-            tf.tile(alen[tf.newaxis, tf.newaxis, :], (bs, slen, 1)), alen[tf.newaxis, :, tf.newaxis]
+            tf.tile(alen[tf.newaxis, tf.newaxis, :], (bs, slen, 1)), alen[tf.newaxis, :, tf.newaxis],
         )
     else:
         attn_mask = mask
@@ -157,7 +157,7 @@ class TFMultiHeadAttention(tf.keras.layers.Layer):
 
         def unshape(x):
             """  compute context """
-            return tf.reshape(tf.transpose(x, perm=(0, 2, 1, 3)), (bs, -1, self.n_heads * dim_per_head))
+            return tf.reshape(tf.transpose(x, perm=(0, 2, 1, 3)), (bs, -1, self.n_heads * dim_per_head),)
 
         q = shape(self.q_lin(input))  # (bs, n_heads, qlen, dim_per_head)
         if kv is None:
@@ -273,7 +273,7 @@ class TFXLMMainLayer(tf.keras.layers.Layer):
                 name="lang_embeddings",
             )
         self.embeddings = TFSharedEmbeddings(
-            self.n_words, self.dim, initializer_range=config.embed_init_std, name="embeddings"
+            self.n_words, self.dim, initializer_range=config.embed_init_std, name="embeddings",
         )  # padding_idx=self.pad_index)
         self.layer_norm_emb = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="layer_norm_emb")
 
@@ -288,7 +288,7 @@ class TFXLMMainLayer(tf.keras.layers.Layer):
 
         for i in range(self.n_layers):
             self.attentions.append(
-                TFMultiHeadAttention(self.n_heads, self.dim, config=config, name="attentions_._{}".format(i))
+                TFMultiHeadAttention(self.n_heads, self.dim, config=config, name="attentions_._{}".format(i),)
             )
             self.layer_norm1.append(
                 tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="layer_norm1_._{}".format(i))
@@ -297,7 +297,7 @@ class TFXLMMainLayer(tf.keras.layers.Layer):
             #     self.layer_norm15.append(nn.LayerNorm(self.dim, eps=config.layer_norm_eps))
             #     self.encoder_attn.append(MultiHeadAttention(self.n_heads, self.dim, dropout=self.attention_dropout))
             self.ffns.append(
-                TFTransformerFFN(self.dim, self.hidden_dim, self.dim, config=config, name="ffns_._{}".format(i))
+                TFTransformerFFN(self.dim, self.hidden_dim, self.dim, config=config, name="ffns_._{}".format(i),)
             )
             self.layer_norm2.append(
                 tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="layer_norm2_._{}".format(i))
@@ -385,7 +385,7 @@ class TFXLMMainLayer(tf.keras.layers.Layer):
 
         if lengths is None:
             if input_ids is not None:
-                lengths = tf.reduce_sum(tf.cast(tf.not_equal(input_ids, self.pad_index), dtype=tf.int32), axis=1)
+                lengths = tf.reduce_sum(tf.cast(tf.not_equal(input_ids, self.pad_index), dtype=tf.int32), axis=1,)
             else:
                 lengths = tf.convert_to_tensor([slen] * bs, tf.int32)
         # mask = input_ids != self.pad_index
@@ -461,7 +461,7 @@ class TFXLMMainLayer(tf.keras.layers.Layer):
 
             # self attention
             attn_outputs = self.attentions[i](
-                [tensor, attn_mask, None, cache, head_mask[i], output_attentions], training=training
+                [tensor, attn_mask, None, cache, head_mask[i], output_attentions], training=training,
             )
             attn = attn_outputs[0]
             if cast_bool_to_primitive(output_attentions) is True:
@@ -518,7 +518,11 @@ class TFXLMPreTrainedModel(TFPreTrainedModel):
             langs_list = tf.constant([[1, 1, 0, 0, 1], [1, 1, 1, 0, 0], [1, 0, 0, 1, 1]])
         else:
             langs_list = None
-        return {"input_ids": inputs_list, "attention_mask": attns_list, "langs": langs_list}
+        return {
+            "input_ids": inputs_list,
+            "attention_mask": attns_list,
+            "langs": langs_list,
+        }
 
 
 XLM_START_DOCSTRING = r"""
@@ -963,7 +967,7 @@ class TFXLMForTokenClassification(TFXLMPreTrainedModel, TFTokenClassificationLos
         self.transformer = TFXLMMainLayer(config, name="transformer")
         self.dropout = tf.keras.layers.Dropout(config.dropout)
         self.classifier = tf.keras.layers.Dense(
-            config.num_labels, kernel_initializer=get_initializer(config.init_std), name="classifier"
+            config.num_labels, kernel_initializer=get_initializer(config.init_std), name="classifier",
         )
 
     @add_start_docstrings_to_callable(XLM_INPUTS_DOCSTRING)
@@ -1051,7 +1055,7 @@ class TFXLMForQuestionAnsweringSimple(TFXLMPreTrainedModel, TFQuestionAnsweringL
         super().__init__(config, *inputs, **kwargs)
         self.transformer = TFXLMMainLayer(config, name="transformer")
         self.qa_outputs = tf.keras.layers.Dense(
-            config.num_labels, kernel_initializer=get_initializer(config.init_std), name="qa_outputs"
+            config.num_labels, kernel_initializer=get_initializer(config.init_std), name="qa_outputs",
         )
 
     @add_start_docstrings_to_callable(XLM_INPUTS_DOCSTRING)
