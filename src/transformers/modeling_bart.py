@@ -1361,10 +1361,15 @@ class BartForTokenOrdering(PretrainedBartModel):
             return_tuple=return_tuple,
         )
 
+        if decoder_attention_mask is not None:
+            decoder_padding_mask = invert_mask(decoder_attention_mask)
+        else:
+            decoder_padding_mask = None
+
         heads_logits = self.pointer(
             query=outputs.encoder_last_hidden_state.transpose(1, 0),
             key=outputs.last_hidden_state.transpose(1, 0),
-            key_padding_mask=invert_mask(decoder_attention_mask),
+            key_padding_mask=decoder_padding_mask,
         )
         logits = self.heads_combination(heads_logits.permute(0, 2, 3, 1)).squeeze(-1)
 
@@ -1389,6 +1394,7 @@ class BartForTokenOrdering(PretrainedBartModel):
         return Seq2SeqTokenOrderingOutput(
             loss=loss,
             logits=logits,
+            last_hidden_state=outputs.last_hidden_state,
             decoder_past_key_values=outputs.decoder_past_key_values,
             decoder_hidden_states=outputs.decoder_hidden_states,
             decoder_attentions=outputs.decoder_attentions,
