@@ -566,8 +566,21 @@ class Seq2SeqTokenOrderingOutput(ModelOutput):
     Args:
         loss (:obj:`torch.FloatTensor` of shape :obj:`(1,)`, `optional`, returned when :obj:`label` is provided):
             Classification (or regression if config.num_labels==1) loss.
+            
         logits (:obj:`torch.FloatTensor` of shape :obj:`(batch_size, seq_length, seq_length)`):
             Classification (or regression if config.num_labels==1) scores (before SoftMax).
+        
+        last_hidden_state (:obj:`torch.FloatTensor` of shape :obj:`(batch_size, sequence_length, hidden_size)`):
+            Sequence of hidden-states at the output of the last layer of the decoder of the model.
+
+            If ``decoder_past_key_values`` is used only the last hidden-state of the sequences of shape :obj:`(batch_size, 1, hidden_size)` is output.
+        decoder_past_key_values (:obj:`List[torch.FloatTensor]`, `optional`, returned when ``use_cache=True`` is passed or when ``config.use_cache=True``):
+            List of :obj:`torch.FloatTensor` of length :obj:`config.n_layers`,  with each tensor of shape
+            :obj:`(2, batch_size, num_heads, sequence_length, embed_size_per_head)`).
+
+            Contains pre-computed hidden-states (key and values in the attention blocks) of the decoder that can be
+            used (see ``decoder_past_key_values`` input) to speed up sequential decoding.
+        
         decoder_past_key_values (:obj:`List[torch.FloatTensor]`, `optional`, returned when ``use_cache=True`` is passed or when ``config.use_cache=True``):
             List of :obj:`torch.FloatTensor` of length :obj:`config.n_layers`,  with each tensor of shape
             :obj:`(2, batch_size, num_heads, sequence_length, embed_size_per_head)`).
@@ -602,6 +615,7 @@ class Seq2SeqTokenOrderingOutput(ModelOutput):
 
     loss: Optional[torch.FloatTensor]
     logits: torch.FloatTensor
+    last_hidden_state: Optional[List[torch.FloatTensor]] = None
     decoder_past_key_values: Optional[List[torch.FloatTensor]] = None
     decoder_hidden_states: Optional[Tuple[torch.FloatTensor]] = None
     decoder_attentions: Optional[Tuple[torch.FloatTensor]] = None
