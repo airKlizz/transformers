@@ -1451,7 +1451,7 @@ class BartForSequenceOrdering(PretrainedBartModel):
 
         bsz, max_length, d_model = outputs.encoder_last_hidden_state.size()
 
-        encoder_sequence_last_hidden_state = self.shared(
+        encoder_sequence_last_hidden_state = self.model.shared(
             torch.ones((bsz, self.max_num_sequences, d_model), dtype=torch.int64) * self.pad_token_id
         )
         decoder_sequence_last_hidden_state = encoder_sequence_last_hidden_state.clone()
