@@ -1368,7 +1368,7 @@ class BartForTokenOrdering(PretrainedBartModel):
             key_padding_mask=decoder_padding_mask,
         )
         logits = self.heads_combination(heads_logits.permute(0, 2, 3, 1)).squeeze(-1) # Combine heads results and remove the last dimension
-        logits = logits.transpose(2, 1) # Transpose to ensure each line corresponds to the distribution probabilities of the position of the next token
+        logits = logits.contiguous().transpose(2, 1) # Transpose to ensure each line corresponds to the distribution probabilities of the position of the next token
         print("Logits size: ", logits.size())
 
         loss = None
