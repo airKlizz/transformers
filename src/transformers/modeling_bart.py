@@ -39,9 +39,9 @@ from .modeling_outputs import (
     BaseModelOutputWithPast,
     Seq2SeqLMOutput,
     Seq2SeqModelOutput,
+    Seq2SeqOrderingOutput,
     Seq2SeqQuestionAnsweringModelOutput,
     Seq2SeqSequenceClassifierOutput,
-    Seq2SeqTokenOrderingOutput,
 )
 from .modeling_utils import PreTrainedModel
 
@@ -1367,8 +1367,12 @@ class BartForTokenOrdering(PretrainedBartModel):
             key=outputs.last_hidden_state.transpose(1, 0),
             key_padding_mask=decoder_padding_mask,
         )
-        logits = self.heads_combination(heads_logits.permute(0, 2, 3, 1)).squeeze(-1) # Combine heads results and remove the last dimension
-        logits = logits.transpose(2, 1).contiguous() # Transpose to ensure each line corresponds to the distribution probabilities of the position of the next token
+        logits = self.heads_combination(heads_logits.permute(0, 2, 3, 1)).squeeze(
+            -1
+        )  # Combine heads results and remove the last dimension
+        logits = logits.transpose(
+            2, 1
+        ).contiguous()  # Transpose to ensure each line corresponds to the distribution probabilities of the position of the next token
 
         loss = None
         if labels is not None:
@@ -1388,7 +1392,118 @@ class BartForTokenOrdering(PretrainedBartModel):
             output = (logits,) + outputs[1:]
             return ((loss,) + output) if loss is not None else output
 
-        return Seq2SeqTokenOrderingOutput(
+        return Seq2SeqOrderingOutput(
+            loss=loss,
+            logits=logits,
+            last_hidden_state=outputs.last_hidden_state,
+            decoder_past_key_values=outputs.decoder_past_key_values,
+            decoder_hidden_states=outputs.decoder_hidden_states,
+            decoder_attentions=outputs.decoder_attentions,
+            encoder_last_hidden_state=outputs.encoder_last_hidden_state,
+            encoder_hidden_states=outputs.encoder_hidden_states,
+            encoder_attentions=outputs.encoder_attentions,
+        )
+
+
+class BartForSequenceOrdering(PretrainedBartModel):
+    base_model_prefix = "model"
+
+    def __init__(self, config: BartConfig):
+        super().__init__(config)
+        self.model = BartModel(config)
+        self.pointer = BartPointerHead(
+            config.d_model, config.decoder_attention_heads, dropout=config.attention_dropout,
+        )
+        self.heads_combination = nn.Linear(config.decoder_attention_heads, 1)
+        self.max_num_sequences = config.max_num_sequences
+        self.bos_token_id = config.bos_token_id
+        self.eos_token_id = config.eos_token_id
+        self.pad_token_id = config.pad_token_id
+
+    def forward(
+        self,
+        input_ids,
+        attention_mask=None,
+        encoder_outputs=None,
+        decoder_input_ids=None,
+        decoder_attention_mask=None,
+        decoder_past_key_values=None,
+        labels=None,
+        use_cache=None,
+        output_attentions=None,
+        output_hidden_states=None,
+        return_tuple=None,
+    ):
+        if labels is not None:
+            use_cache = False
+
+        outputs = self.model(
+            input_ids,
+            attention_mask=attention_mask,
+            decoder_input_ids=decoder_input_ids,
+            encoder_outputs=encoder_outputs,
+            decoder_attention_mask=decoder_attention_mask,
+            decoder_past_key_values=decoder_past_key_values,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_tuple=return_tuple,
+        )
+
+        bsz, max_length, d_model = outputs.encoder_last_hidden_state.size()
+
+        encoder_sequence_last_hidden_state = self.shared(
+            torch.ones((bsz, self.max_num_sequences, d_model), dtype=torch.int64) * self.pad_token_id
+        )
+        decoder_sequence_last_hidden_state = encoder_sequence_last_hidden_state.clone()
+
+        # TODO: Replace for loop
+        for i, example in enumerate(encoder_sequence_last_hidden_state):
+            sequence_state = outputs.encoder_last_hidden_state[i][input_ids[i] == self.eos_token_id][
+                : self.max_num_sequences
+            ]
+            example[: sequence_states.size(0)] = sequence_state
+
+        for i, example in enumerate(decoder_sequence_last_hidden_state):
+            sequence_state = outputs.last_hidden_state[i][
+                torch.logical_or(decoder_input_ids[i] == self.bos_token_id, decoder_input_ids[i] == self.eos_token_id)
+            ][: self.max_num_sequences]
+            example[: sequence_states.size(0)] = sequence_state
+
+        decoder_attention_mask = (decoder_sequence_last_hidden_state != 0).all(-1)
+        decoder_padding_mask = invert_mask(decoder_attention_mask)
+
+        heads_logits = self.pointer(
+            query=encoder_sequence_last_hidden_state.transpose(1, 0),
+            key=decoder_sequence_last_hidden_state.transpose(1, 0),
+            key_padding_mask=decoder_padding_mask,
+        )
+        logits = self.heads_combination(heads_logits.permute(0, 2, 3, 1)).squeeze(
+            -1
+        )  # Combine heads results and remove the last dimension
+        logits = logits.transpose(
+            2, 1
+        ).contiguous()  # Transpose to ensure each line corresponds to the distribution probabilities of the position of the next token
+
+        loss = None
+        if labels is not None:
+            loss_fct = CrossEntropyLoss()
+            # Only keep active parts of the loss
+            if attention_mask is not None:
+                active_loss = attention_mask.view(-1) == 1
+                active_logits = logits.view(-1, logits.size(-1))
+                active_labels = torch.where(
+                    active_loss, labels.view(-1), torch.tensor(loss_fct.ignore_index).type_as(labels),
+                )
+                loss = loss_fct(active_logits, active_labels)
+            else:
+                loss = loss_fct(logits.view(-1, logits.size(-1)), labels.view(-1))
+
+        if return_tuple:
+            output = (logits,) + outputs[1:]
+            return ((loss,) + output) if loss is not None else output
+
+        return Seq2SeqOrderingOutput(
             loss=loss,
             logits=logits,
             last_hidden_state=outputs.last_hidden_state,

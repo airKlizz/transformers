@@ -559,7 +559,7 @@ class Seq2SeqQuestionAnsweringModelOutput(ModelOutput):
 
 
 @dataclass
-class Seq2SeqTokenOrderingOutput(ModelOutput):
+class Seq2SeqOrderingOutput(ModelOutput):
     """
     Base class for outputs of sequence-to-sequence sentence classification models.
 

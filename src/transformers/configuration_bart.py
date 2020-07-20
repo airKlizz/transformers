@@ -60,6 +60,7 @@ class BartConfig(PretrainedConfig):
         init_std=0.02,
         classifier_dropout=0.0,
         num_labels=3,
+        max_num_sequences=16,
         is_encoder_decoder=True,
         pad_token_id=1,
         bos_token_id=0,
@@ -126,6 +127,9 @@ class BartConfig(PretrainedConfig):
 
         # pos embedding offset
         self.extra_pos_embeddings = self.pad_token_id + 1
+
+        # Params ordering
+        self.max_num_sequences = max_num_sequences
 
     @property
     def num_attention_heads(self) -> int:
