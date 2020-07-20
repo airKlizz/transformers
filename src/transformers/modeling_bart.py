@@ -1461,11 +1461,11 @@ class BartForSequenceOrdering(PretrainedBartModel):
             sequence_state = outputs.encoder_last_hidden_state[i][input_ids[i] == self.eos_token_id][
                 : self.max_num_sequences
             ]
-            example[: sequence_states.size(0)] = sequence_state
+            example[: sequence_state.size(0)] = sequence_state
 
         for i, example in enumerate(decoder_sequence_last_hidden_state):
             sequence_state = outputs.last_hidden_state[i][input_ids[i] == self.eos_token_id][: self.max_num_sequences]
-            example[: sequence_states.size(0)] = sequence_state
+            example[: sequence_state.size(0)] = sequence_state
 
         decoder_attention_mask = (decoder_sequence_last_hidden_state != 0).all(-1)
         decoder_padding_mask = invert_mask(decoder_attention_mask)
