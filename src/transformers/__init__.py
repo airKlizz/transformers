@@ -291,6 +291,7 @@ if is_torch_available():
         BartForConditionalGeneration,
         BartForQuestionAnswering,
         BartForTokenOrdering,
+        BartForSequenceOrdering,
         BART_PRETRAINED_MODEL_ARCHIVE_LIST,
     )
     from .modeling_marian import MarianMTModel
