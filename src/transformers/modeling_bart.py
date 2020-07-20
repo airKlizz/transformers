@@ -1416,7 +1416,6 @@ class BartForSequenceOrdering(PretrainedBartModel):
         )
         self.heads_combination = nn.Linear(config.decoder_attention_heads, 1)
         self.max_num_sequences = config.max_num_sequences
-        self.bos_token_id = config.bos_token_id
         self.eos_token_id = config.eos_token_id
         self.pad_token_id = config.pad_token_id
 
@@ -1465,9 +1464,7 @@ class BartForSequenceOrdering(PretrainedBartModel):
             example[: sequence_states.size(0)] = sequence_state
 
         for i, example in enumerate(decoder_sequence_last_hidden_state):
-            sequence_state = outputs.last_hidden_state[i][
-                torch.logical_or(decoder_input_ids[i] == self.bos_token_id, decoder_input_ids[i] == self.eos_token_id)
-            ][: self.max_num_sequences]
+            sequence_state = outputs.last_hidden_state[i][input_ids[i] == self.eos_token_id][: self.max_num_sequences]
             example[: sequence_states.size(0)] = sequence_state
 
         decoder_attention_mask = (decoder_sequence_last_hidden_state != 0).all(-1)
