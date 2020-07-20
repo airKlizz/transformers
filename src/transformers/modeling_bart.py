@@ -1367,7 +1367,7 @@ class BartForTokenOrdering(PretrainedBartModel):
             key=outputs.last_hidden_state.transpose(1, 0),
             key_padding_mask=decoder_padding_mask,
         )
-        logits = self.heads_combination(heads_logits.permute(0, 2, 3, 1)).squeeze(-1)
+        logits = self.heads_combination(heads_logits.permute(0, 2, 3, 1)).squeeze(-1).transpose(-1, -2)
 
         loss = None
         if labels is not None:
