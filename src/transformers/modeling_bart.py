@@ -844,23 +844,17 @@ class BartPointerHead(nn.Module):
             query_padding_mask = None
         assert query_padding_mask is None or query_padding_mask.size()[:2] == (bsz, tgt_len,), f"query_padding_mask.size(): {query_padding_mask.size()}, (bsz, tgt_len,): {(bsz, tgt_len,)}"
 
-        print(attn_weights)
-
         if key_padding_mask is not None:  # don't attend to padding symbols
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
             reshaped = key_padding_mask.unsqueeze(1).unsqueeze(2)
             attn_weights = attn_weights.masked_fill(reshaped, float("-inf"))
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        print(attn_weights)
-
         if query_padding_mask is not None:  # don't attend to padding symbols
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len).transpose(3, 2)
             reshaped = query_padding_mask.unsqueeze(1).unsqueeze(2)
             attn_weights = attn_weights.masked_fill(reshaped, float("-inf"))
             attn_weights = attn_weights.view(bsz * self.num_heads, src_len, tgt_len).transpose(2, 1).contiguous()
-
-        print(attn_weights)
 
         attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
         return attn_weights
@@ -1478,11 +1472,8 @@ class BartForSequenceOrdering(PretrainedBartModel):
         decoder_sequence_last_hidden_state = outputs.last_hidden_state
 
         encoder_sequence_attention_mask = input_ids == self.eos_token_id
-        print(f"use_cache: {use_cache}")
         if use_cache:
             decoder_sequence_attention_mask = decoder_input_ids[:, -1:] == self.eos_token_id
-            print(f"decoder_sequence_attention_mask : {decoder_sequence_attention_mask.shape}")
-            print(f"decoder_input_ids[:, -1:] {decoder_input_ids[:, -1:].shape}")
         else:
             decoder_sequence_attention_mask = decoder_input_ids == self.eos_token_id
 
@@ -1495,6 +1486,7 @@ class BartForSequenceOrdering(PretrainedBartModel):
             key=decoder_sequence_last_hidden_state.transpose(1, 0),
             key_padding_mask=decoder_padding_mask,
         )
+        print(heads_logits.permute(0, 2, 3, 1))
         logits = self.heads_combination(heads_logits.permute(0, 2, 3, 1)).squeeze(-1)
         logits = logits.transpose(2, 1).contiguous()
 
