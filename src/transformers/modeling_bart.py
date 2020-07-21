@@ -1507,6 +1507,7 @@ class BartForSequenceOrdering(PretrainedBartModel):
             loss_fct = CrossEntropyLoss()
             # Only keep active parts of the loss
             loss = loss_fct(logits.view(-1, logits.size(-1)), labels.view(-1))
+            print(loss)
             
         if return_tuple:
             output = (logits,) + outputs[1:]
