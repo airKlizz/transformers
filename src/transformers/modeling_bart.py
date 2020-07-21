@@ -1494,17 +1494,7 @@ class BartForSequenceOrdering(PretrainedBartModel):
         if labels is not None:
             loss_fct = CrossEntropyLoss()
             # Only keep active parts of the loss
-            print(f"logits: {logits.view(-1, logits.size(-1)).shape}, {logits.view(-1, logits.size(-1)).dtype}")
-            print(f"labels: {labels.view(-1).shape}, {labels.view(-1).dtype}")
-            if attention_mask is not None:
-                active_loss = labels.view(-1) != -100
-                active_logits = logits.view(-1, logits.size(-1))
-                active_labels = torch.where(
-                    active_loss, labels.view(-1), torch.tensor(loss_fct.ignore_index).type_as(labels),
-                )
-                loss = loss_fct(active_logits, active_labels)
-            else:
-                loss = loss_fct(logits.view(-1, logits.size(-1)), labels.view(-1))
+            loss = loss_fct(logits.view(-1, logits.size(-1)), labels.view(-1))
 
         if return_tuple:
             output = (logits,) + outputs[1:]
