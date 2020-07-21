@@ -838,11 +838,13 @@ class BartPointerHead(nn.Module):
         # This is part of a workaround to get around fork/join parallelism not supporting Optional types.
         if key_padding_mask is not None and key_padding_mask.dim() == 0:
             key_padding_mask = None
-        assert key_padding_mask is None or key_padding_mask.size()[:2] == (bsz, src_len,)
+        assert key_padding_mask is None or key_padding_mask.size()[:2] == (bsz, src_len,), f"key_padding_mask.size(): {key_padding_mask.size()}" 
 
         if query_padding_mask is not None and query_padding_mask.dim() == 0:
             query_padding_mask = None
-        assert query_padding_mask is None or query_padding_mask.size()[:2] == (bsz, tgt_len,)
+        assert query_padding_mask is None or query_padding_mask.size()[:2] == (bsz, tgt_len,), f"query_padding_mask.size(): {query_padding_mask.size()}"
+
+        print(attn_weights)
 
         if key_padding_mask is not None:  # don't attend to padding symbols
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
@@ -850,11 +852,15 @@ class BartPointerHead(nn.Module):
             attn_weights = attn_weights.masked_fill(reshaped, float("-inf"))
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
+        print(attn_weights)
+
         if query_padding_mask is not None:  # don't attend to padding symbols
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len).transpose(3, 2)
             reshaped = query_padding_mask.unsqueeze(1).unsqueeze(2)
             attn_weights = attn_weights.masked_fill(reshaped, float("-inf"))
             attn_weights = attn_weights.view(bsz * self.num_heads, src_len, tgt_len).transpose(2, 1).contiguous()
+
+        print(attn_weights)
 
         attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
         return attn_weights
