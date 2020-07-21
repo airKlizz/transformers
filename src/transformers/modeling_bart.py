@@ -1473,9 +1473,9 @@ class BartForSequenceOrdering(PretrainedBartModel):
 
         encoder_sequence_attention_mask = (input_ids == self.eos_token_id).long()
         if use_cache:
-            decoder_sequence_attention_mask = (decoder_input_ids[:, -1:] == self.eos_token_id).long()
+            decoder_sequence_attention_mask = (decoder_input_ids[:, -1:] == self.eos_token_id).float()
         else:
-            decoder_sequence_attention_mask = (decoder_input_ids == self.eos_token_id).long()
+            decoder_sequence_attention_mask = (decoder_input_ids == self.eos_token_id).float()
 
         sequence_attention_mask = torch.bmm(decoder_sequence_attention_mask.unsqueeze(2), encoder_sequence_attention_mask.unsqueeze(1))
 
