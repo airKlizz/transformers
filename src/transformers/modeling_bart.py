@@ -1486,14 +1486,16 @@ class BartForSequenceOrdering(PretrainedBartModel):
             key=decoder_sequence_last_hidden_state.transpose(1, 0),
             key_padding_mask=decoder_padding_mask,
         )
-        print(heads_logits.permute(0, 2, 3, 1))
         logits = self.heads_combination(heads_logits.permute(0, 2, 3, 1)).squeeze(-1)
+        logits[logits != logits] = float("-inf")
         logits = logits.transpose(2, 1).contiguous()
 
         loss = None
         if labels is not None:
             loss_fct = CrossEntropyLoss()
             # Only keep active parts of the loss
+            print(f"logits: {logits.view(-1, logits.size(-1)).shape}, {logits.view(-1, logits.size(-1)).dtype}")
+            print(f"labels: {labels.view(-1).shape}, {labels.view(-1).dtype}")
             if attention_mask is not None:
                 active_loss = labels.view(-1) != -100
                 active_logits = logits.view(-1, logits.size(-1))
