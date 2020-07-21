@@ -1479,8 +1479,8 @@ class BartForSequenceOrdering(PretrainedBartModel):
 
         sequence_attention_mask = torch.bmm(decoder_sequence_attention_mask.unsqueeze(2), encoder_sequence_attention_mask.unsqueeze(1))
 
-        print(sequence_attention_mask)
-        print(sequence_attention_mask.shape)
+        #print(sequence_attention_mask)
+        #print(sequence_attention_mask.shape)
 
         
 
@@ -1498,9 +1498,9 @@ class BartForSequenceOrdering(PretrainedBartModel):
 
         logits[sequence_attention_mask == 0] = float("-inf")
 
-        print(logits)
-        print(logits.shape)
-        print(logits.argmax(-1))
+        #print(logits)
+        #print(logits.shape)
+        #print(logits.argmax(-1))
 
         loss = None
         if labels is not None:
