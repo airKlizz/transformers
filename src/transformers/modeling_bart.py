@@ -1491,11 +1491,12 @@ class BartForSequenceOrdering(PretrainedBartModel):
 
         heads_logits = heads_logits.permute(0, 2, 3, 1)
         logits = self.heads_combination(heads_logits).squeeze(-1)
-        logits = logits.transpose(2, 1).contiguous() # (bsz, decoder_len, encoder_len) => P_ij = probability of j to be the sentence after i
+        logits = logits.transpose(2, 1).contiguous() 
+        # logits: shape = (bsz, decoder_len, encoder_len), X_ij = probability of j to be the sentence after i
 
         assert sequence_attention_mask.size() == logits.size(), f"{sequence_attention_mask.size()}, {logits.size()}"
 
-        logits[sequence_attention_mask.bool()] = float("-inf")
+        logits[sequence_attention_mask == 0] = float("-inf")
 
         print(logits)
         print(logits.shape)
