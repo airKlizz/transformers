@@ -1482,15 +1482,16 @@ class BartForSequenceOrdering(PretrainedBartModel):
 
         heads_logits = self.pointer(
             query=encoder_sequence_last_hidden_state.transpose(1, 0),
-            query_padding_mask=encoder_padding_mask,
+            #query_padding_mask=encoder_padding_mask,
             key=decoder_sequence_last_hidden_state.transpose(1, 0),
-            key_padding_mask=decoder_padding_mask,
+            #key_padding_mask=decoder_padding_mask,
         )
 
+        heads_logits = heads_logits.permute(0, 2, 3, 1)
         print(heads_logits)
 
 
-        logits = self.heads_combination(heads_logits.permute(0, 2, 3, 1)).squeeze(-1)
+        logits = self.heads_combination(heads_logits).squeeze(-1)
         logits[logits != logits] = 0
         logits = logits.transpose(2, 1).contiguous()
 
