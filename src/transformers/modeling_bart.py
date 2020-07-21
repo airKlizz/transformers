@@ -1472,6 +1472,8 @@ class BartForSequenceOrdering(PretrainedBartModel):
             return_tuple=return_tuple,
         )
 
+        use_cache = use_cache if use_cache is not None else self.config.use_cache
+
         encoder_sequence_last_hidden_state = outputs.encoder_last_hidden_state
         decoder_sequence_last_hidden_state = outputs.last_hidden_state
 
