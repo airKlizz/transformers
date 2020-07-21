@@ -1469,15 +1469,11 @@ class BartForSequenceOrdering(PretrainedBartModel):
         encoder_sequence_last_hidden_state = outputs.encoder_last_hidden_state
         decoder_sequence_last_hidden_state = outputs.last_hidden_state
 
-        assert (
-            encoder_sequence_last_hidden_state.size()[:2] == input_ids.size()[:2]
-        ), f"encoder_sequence_last_hidden_state.size() >> {encoder_sequence_last_hidden_state.size()}, input_ids.size() >> {input_ids.size()}"
-        assert (
-            decoder_sequence_last_hidden_state.size()[:2] == decoder_input_ids.size()[:2]
-        ), f"decoder_sequence_last_hidden_state.size() >> {decoder_sequence_last_hidden_state.size()}, decoder_input_ids.size() >> {decoder_input_ids.size()}"
-
         encoder_sequence_attention_mask = input_ids == self.eos_token_id
-        decoder_sequence_attention_mask = decoder_input_ids == self.eos_token_id
+        if use_cache:
+            decoder_sequence_attention_mask = decoder_input_ids[:, -1:] == self.eos_token_id
+        else:
+            decoder_sequence_attention_mask = decoder_input_ids == self.eos_token_id
 
         encoder_padding_mask = invert_mask(encoder_sequence_attention_mask)
         decoder_padding_mask = invert_mask(decoder_sequence_attention_mask)
