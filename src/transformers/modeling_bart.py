@@ -1471,32 +1471,35 @@ class BartForSequenceOrdering(PretrainedBartModel):
         encoder_sequence_last_hidden_state = outputs.encoder_last_hidden_state
         decoder_sequence_last_hidden_state = outputs.last_hidden_state
 
-        encoder_sequence_attention_mask = input_ids == self.eos_token_id
+        encoder_sequence_attention_mask = (input_ids == self.eos_token_id).long()
         if use_cache:
-            decoder_sequence_attention_mask = decoder_input_ids[:, -1:] == self.eos_token_id
+            decoder_sequence_attention_mask = (decoder_input_ids[:, -1:] == self.eos_token_id).long()
         else:
-            decoder_sequence_attention_mask = decoder_input_ids == self.eos_token_id
+            decoder_sequence_attention_mask = (decoder_input_ids == self.eos_token_id).long()
 
-        encoder_padding_mask = invert_mask(encoder_sequence_attention_mask)
-        decoder_padding_mask = invert_mask(decoder_sequence_attention_mask)
+        sequence_attention_mask = torch.bmm(decoder_sequence_attention_mask.transpose(2, 1), encoder_sequence_attention_mask)
 
-        print(encoder_padding_mask, decoder_padding_mask)
-        print(encoder_padding_mask.shape, decoder_padding_mask.shape)
+        print(sequence_attention_mask)
+        print(sequence_attention_mask.shape)
+
+        
 
         heads_logits = self.pointer(
             query=encoder_sequence_last_hidden_state.transpose(1, 0),
-            #query_padding_mask=encoder_padding_mask,
             key=decoder_sequence_last_hidden_state.transpose(1, 0),
-            #key_padding_mask=decoder_padding_mask,
         )
 
         heads_logits = heads_logits.permute(0, 2, 3, 1)
         logits = self.heads_combination(heads_logits).squeeze(-1)
-        logits[logits != logits] = 0
         logits = logits.transpose(2, 1).contiguous() # (bsz, decoder_len, encoder_len) => P_ij = probability of j to be the sentence after i
 
+        assert sequence_attention_mask.size() == logits.size(), f"{sequence_attention_mask.size()}, {logits.size()}"
 
+        logits[sequence_attention_mask.bool()] = float("-inf")
 
+        print(logits)
+        print(logits.shape)
+        print(logits.argmax(-1))
 
         loss = None
         if labels is not None:
