@@ -838,11 +838,11 @@ class BartPointerHead(nn.Module):
         # This is part of a workaround to get around fork/join parallelism not supporting Optional types.
         if key_padding_mask is not None and key_padding_mask.dim() == 0:
             key_padding_mask = None
-        assert key_padding_mask is None or key_padding_mask.size()[:2] == (bsz, src_len,), f"key_padding_mask.size(): {key_padding_mask.size()}" 
+        assert key_padding_mask is None or key_padding_mask.size()[:2] == (bsz, src_len,), f"key_padding_mask.size(): {key_padding_mask.size()}, (bsz, src_len,): {(bsz, src_len,)}" 
 
         if query_padding_mask is not None and query_padding_mask.dim() == 0:
             query_padding_mask = None
-        assert query_padding_mask is None or query_padding_mask.size()[:2] == (bsz, tgt_len,), f"query_padding_mask.size(): {query_padding_mask.size()}"
+        assert query_padding_mask is None or query_padding_mask.size()[:2] == (bsz, tgt_len,), f"query_padding_mask.size(): {query_padding_mask.size()}, (bsz, tgt_len,): {(bsz, tgt_len,)}"
 
         print(attn_weights)
 
