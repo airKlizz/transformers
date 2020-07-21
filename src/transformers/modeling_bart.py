@@ -1479,11 +1479,6 @@ class BartForSequenceOrdering(PretrainedBartModel):
 
         sequence_attention_mask = torch.bmm(decoder_sequence_attention_mask.unsqueeze(2), encoder_sequence_attention_mask.unsqueeze(1))
 
-        #print(sequence_attention_mask)
-        #print(sequence_attention_mask.shape)
-
-        
-
         heads_logits = self.pointer(
             query=encoder_sequence_last_hidden_state.transpose(1, 0),
             key=decoder_sequence_last_hidden_state.transpose(1, 0),
@@ -1498,16 +1493,10 @@ class BartForSequenceOrdering(PretrainedBartModel):
 
         logits[sequence_attention_mask == 0] = float("-inf")
 
-        #print(logits)
-        #print(logits.shape)
-        #print(logits.argmax(-1))
-
         loss = None
         if labels is not None:
             loss_fct = CrossEntropyLoss()
-            # Only keep active parts of the loss
             loss = loss_fct(logits.view(-1, logits.size(-1)), labels.view(-1))
-            print(loss)
             
         if return_tuple:
             output = (logits,) + outputs[1:]
