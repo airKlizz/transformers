@@ -1480,6 +1480,9 @@ class BartForSequenceOrdering(PretrainedBartModel):
         encoder_padding_mask = invert_mask(encoder_sequence_attention_mask)
         decoder_padding_mask = invert_mask(decoder_sequence_attention_mask)
 
+        print(encoder_padding_mask, decoder_padding_mask)
+        print(encoder_padding_mask.shape, decoder_padding_mask.shape)
+
         heads_logits = self.pointer(
             query=encoder_sequence_last_hidden_state.transpose(1, 0),
             #query_padding_mask=encoder_padding_mask,
@@ -1490,18 +1493,17 @@ class BartForSequenceOrdering(PretrainedBartModel):
         heads_logits = heads_logits.permute(0, 2, 3, 1)
         logits = self.heads_combination(heads_logits).squeeze(-1)
         logits[logits != logits] = 0
-        logits = logits.transpose(2, 1).contiguous()
+        logits = logits.transpose(2, 1).contiguous() # (bsz, decoder_len, encoder_len) => P_ij = probability of j to be the sentence after i
+
+
+
 
         loss = None
         if labels is not None:
             loss_fct = CrossEntropyLoss()
             # Only keep active parts of the loss
             loss = loss_fct(logits.view(-1, logits.size(-1)), labels.view(-1))
-            print(loss)
-            logits.view(-1, logits.size(-1))[labels.view(-1) == -100] = 1000
-            loss_bis = loss_fct(logits.view(-1, logits.size(-1)), labels.view(-1))
-            print(loss_bis)
-
+            
         if return_tuple:
             output = (logits,) + outputs[1:]
             return ((loss,) + output) if loss is not None else output
