@@ -781,6 +781,7 @@ class BartPointerHead(nn.Module):
         self,
         query,
         key: Optional[Tensor],
+        query_padding_mask: Optional[Tensor] = None,
         key_padding_mask: Optional[Tensor] = None,
         layer_state: Optional[Dict[str, Optional[Tensor]]] = None,
         attn_mask: Optional[Tensor] = None,
@@ -814,12 +815,15 @@ class BartPointerHead(nn.Module):
             k = self._shape(k, -1, bsz)
 
         if saved_state is not None:
-            k, key_padding_mask = self._use_saved_state(k, saved_state, key_padding_mask, static_kv, bsz)
+            k, key_padding_mask, query_padding_mask = self._use_saved_state(
+                k, saved_state, key_padding_mask, query_padding_mask, static_kv, bsz
+            )
 
         # Update cache
         layer_state[self.cache_key] = {
             "prev_key": k.view(bsz, self.num_heads, -1, self.head_dim),
             "prev_key_padding_mask": key_padding_mask if not static_kv else None,
+            "prev_query_padding_mask": query_padding_mask if not static_kv else None,
         }
 
         assert k is not None
@@ -836,16 +840,26 @@ class BartPointerHead(nn.Module):
             key_padding_mask = None
         assert key_padding_mask is None or key_padding_mask.size()[:2] == (bsz, src_len,)
 
+        if query_padding_mask is not None and query_padding_mask.dim() == 0:
+            query_padding_mask = None
+        assert query_padding_mask is None or query_padding_mask.size()[:2] == (bsz, tgt_len,)
+
         if key_padding_mask is not None:  # don't attend to padding symbols
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
             reshaped = key_padding_mask.unsqueeze(1).unsqueeze(2)
             attn_weights = attn_weights.masked_fill(reshaped, float("-inf"))
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
+        if query_padding_mask is not None:  # don't attend to padding symbols
+            attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len).transpose(3, 2)
+            reshaped = query_padding_mask.unsqueeze(1).unsqueeze(2)
+            attn_weights = attn_weights.masked_fill(reshaped, float("-inf"))
+            attn_weights = attn_weights.view(bsz * self.num_heads, src_len, tgt_len).transpose(2, 1).contiguous()
+
         attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
         return attn_weights
 
-    def _use_saved_state(self, k, saved_state, key_padding_mask, static_kv, bsz):
+    def _use_saved_state(self, k, saved_state, key_padding_mask, query_padding_mask, static_kv, bsz):
         # saved states are stored with shape (bsz, num_heads, seq_len, head_dim)
         if "prev_key" in saved_state:
             _prev_key = saved_state["prev_key"]
@@ -865,7 +879,15 @@ class BartPointerHead(nn.Module):
                 new_key_padding_mask = torch.cat([prev_key_padding_mask, key_padding_mask], dim=1)
         else:
             new_key_padding_mask = key_padding_mask
-        return k, new_key_padding_mask
+        prev_query_padding_mask: Optional[Tensor] = saved_state.get("prev_query_padding_mask", None)
+        if prev_query_padding_mask is not None:
+            if static_kv:
+                new_query_padding_mask = prev_query_padding_mask
+            else:
+                new_query_padding_mask = torch.cat([prev_query_padding_mask, query_padding_mask], dim=1)
+        else:
+            new_query_padding_mask = query_padding_mask
+        return k, new_key_padding_mask, new_query_padding_mask
 
 
 class BartClassificationHead(nn.Module):
@@ -1367,12 +1389,8 @@ class BartForTokenOrdering(PretrainedBartModel):
             key=outputs.last_hidden_state.transpose(1, 0),
             key_padding_mask=decoder_padding_mask,
         )
-        logits = self.heads_combination(heads_logits.permute(0, 2, 3, 1)).squeeze(
-            -1
-        )  # Combine heads results and remove the last dimension
-        logits = logits.transpose(
-            2, 1
-        ).contiguous()  # Transpose to ensure each line corresponds to the distribution probabilities of the position of the next token
+        logits = self.heads_combination(heads_logits.permute(0, 2, 3, 1)).squeeze(-1)
+        logits = logits.transpose(2, 1).contiguous()
 
         loss = None
         if labels is not None:
@@ -1417,7 +1435,6 @@ class BartForSequenceOrdering(PretrainedBartModel):
         self.heads_combination = nn.Linear(config.decoder_attention_heads, 1)
         self.max_num_sequences = config.max_num_sequences
         self.eos_token_id = config.eos_token_id
-        self.pad_token_id = config.pad_token_id
 
     def forward(
         self,
@@ -1449,45 +1466,37 @@ class BartForSequenceOrdering(PretrainedBartModel):
             return_tuple=return_tuple,
         )
 
-        bsz, max_length, d_model = outputs.encoder_last_hidden_state.size()
+        encoder_sequence_last_hidden_state = outputs.encoder_last_hidden_state
+        decoder_sequence_last_hidden_state = outputs.last_hidden_state
 
-        encoder_sequence_last_hidden_state = self.model.shared(
-            torch.ones((bsz, self.max_num_sequences, d_model), dtype=torch.int64) * self.pad_token_id
-        )
-        decoder_sequence_last_hidden_state = encoder_sequence_last_hidden_state.clone()
+        assert (
+            encoder_sequence_last_hidden_state.size() == input_ids.size()
+        ), f"encoder_sequence_last_hidden_state.size() >> {encoder_sequence_last_hidden_state.size()}, input_ids.size() >> {input_ids.size()}"
+        assert (
+            decoder_sequence_last_hidden_state.size() == decoder_input_ids.size()
+        ), f"decoder_sequence_last_hidden_state.size() >> {decoder_sequence_last_hidden_state.size()}, decoder_input_ids.size() >> {decoder_input_ids.size()}"
 
-        # TODO: Replace for loop
-        for i, example in enumerate(encoder_sequence_last_hidden_state):
-            sequence_state = outputs.encoder_last_hidden_state[i][input_ids[i] == self.eos_token_id][
-                : self.max_num_sequences
-            ]
-            example[: sequence_state.size(0)] = sequence_state
+        encoder_sequence_attention_mask = input_ids == self.eos_token_id
+        decoder_sequence_attention_mask = decoder_input_ids == self.eos_token_id
 
-        for i, example in enumerate(decoder_sequence_last_hidden_state):
-            sequence_state = outputs.last_hidden_state[i][input_ids[i] == self.eos_token_id][: self.max_num_sequences]
-            example[: sequence_state.size(0)] = sequence_state
-
-        decoder_attention_mask = (decoder_sequence_last_hidden_state != 0).all(-1)
-        decoder_padding_mask = invert_mask(decoder_attention_mask)
+        encoder_padding_mask = invert_mask(encoder_sequence_attention_mask)
+        decoder_padding_mask = invert_mask(decoder_sequence_attention_mask)
 
         heads_logits = self.pointer(
             query=encoder_sequence_last_hidden_state.transpose(1, 0),
+            query_padding_mask=encoder_padding_mask,
             key=decoder_sequence_last_hidden_state.transpose(1, 0),
             key_padding_mask=decoder_padding_mask,
         )
-        logits = self.heads_combination(heads_logits.permute(0, 2, 3, 1)).squeeze(
-            -1
-        )  # Combine heads results and remove the last dimension
-        logits = logits.transpose(
-            2, 1
-        ).contiguous()  # Transpose to ensure each line corresponds to the distribution probabilities of the position of the next token
+        logits = self.heads_combination(heads_logits.permute(0, 2, 3, 1)).squeeze(-1)
+        logits = logits.transpose(2, 1).contiguous()
 
         loss = None
         if labels is not None:
             loss_fct = CrossEntropyLoss()
             # Only keep active parts of the loss
             if attention_mask is not None:
-                active_loss = attention_mask.view(-1) == 1
+                active_loss = labels.view(-1) != 0
                 active_logits = logits.view(-1, logits.size(-1))
                 active_labels = torch.where(
                     active_loss, labels.view(-1), torch.tensor(loss_fct.ignore_index).type_as(labels),
