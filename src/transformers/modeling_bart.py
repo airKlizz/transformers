@@ -1471,7 +1471,7 @@ class BartForSequenceOrdering(PretrainedBartModel):
         encoder_sequence_last_hidden_state = outputs.encoder_last_hidden_state
         decoder_sequence_last_hidden_state = outputs.last_hidden_state
 
-        encoder_sequence_attention_mask = (input_ids == self.eos_token_id).long()
+        encoder_sequence_attention_mask = (input_ids == self.eos_token_id).float()
         if use_cache:
             decoder_sequence_attention_mask = (decoder_input_ids[:, -1:] == self.eos_token_id).float()
         else:
