@@ -781,7 +781,6 @@ class BartPointerHead(nn.Module):
         self,
         query,
         key: Optional[Tensor],
-        query_padding_mask: Optional[Tensor] = None,
         key_padding_mask: Optional[Tensor] = None,
         layer_state: Optional[Dict[str, Optional[Tensor]]] = None,
         attn_mask: Optional[Tensor] = None,
@@ -815,15 +814,14 @@ class BartPointerHead(nn.Module):
             k = self._shape(k, -1, bsz)
 
         if saved_state is not None:
-            k, key_padding_mask, query_padding_mask = self._use_saved_state(
-                k, saved_state, key_padding_mask, query_padding_mask, static_kv, bsz
+            k, key_padding_mask = self._use_saved_state(
+                k, saved_state, key_padding_mask, static_kv, bsz
             )
 
         # Update cache
         layer_state[self.cache_key] = {
             "prev_key": k.view(bsz, self.num_heads, -1, self.head_dim),
             "prev_key_padding_mask": key_padding_mask if not static_kv else None,
-            "prev_query_padding_mask": query_padding_mask if not static_kv else None,
         }
 
         assert k is not None
@@ -840,26 +838,16 @@ class BartPointerHead(nn.Module):
             key_padding_mask = None
         assert key_padding_mask is None or key_padding_mask.size()[:2] == (bsz, src_len,), f"key_padding_mask.size(): {key_padding_mask.size()}, (bsz, src_len,): {(bsz, src_len,)}" 
 
-        if query_padding_mask is not None and query_padding_mask.dim() == 0:
-            query_padding_mask = None
-        assert query_padding_mask is None or query_padding_mask.size()[:2] == (bsz, tgt_len,), f"query_padding_mask.size(): {query_padding_mask.size()}, (bsz, tgt_len,): {(bsz, tgt_len,)}"
-
         if key_padding_mask is not None:  # don't attend to padding symbols
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
             reshaped = key_padding_mask.unsqueeze(1).unsqueeze(2)
             attn_weights = attn_weights.masked_fill(reshaped, float("-inf"))
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        if query_padding_mask is not None:  # don't attend to padding symbols
-            attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len).transpose(3, 2)
-            reshaped = query_padding_mask.unsqueeze(1).unsqueeze(2)
-            attn_weights = attn_weights.masked_fill(reshaped, float("-inf"))
-            attn_weights = attn_weights.view(bsz * self.num_heads, src_len, tgt_len).transpose(2, 1).contiguous()
-
         attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
         return attn_weights
 
-    def _use_saved_state(self, k, saved_state, key_padding_mask, query_padding_mask, static_kv, bsz):
+    def _use_saved_state(self, k, saved_state, key_padding_mask, static_kv, bsz):
         # saved states are stored with shape (bsz, num_heads, seq_len, head_dim)
         if "prev_key" in saved_state:
             _prev_key = saved_state["prev_key"]
@@ -879,15 +867,7 @@ class BartPointerHead(nn.Module):
                 new_key_padding_mask = torch.cat([prev_key_padding_mask, key_padding_mask], dim=1)
         else:
             new_key_padding_mask = key_padding_mask
-        prev_query_padding_mask: Optional[Tensor] = saved_state.get("prev_query_padding_mask", None)
-        if prev_query_padding_mask is not None:
-            if static_kv:
-                new_query_padding_mask = prev_query_padding_mask
-            else:
-                new_query_padding_mask = torch.cat([prev_query_padding_mask, query_padding_mask], dim=1)
-        else:
-            new_query_padding_mask = query_padding_mask
-        return k, new_key_padding_mask, new_query_padding_mask
+        return k, new_key_padding_mask
 
 
 class BartClassificationHead(nn.Module):
