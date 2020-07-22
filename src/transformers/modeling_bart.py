@@ -701,7 +701,7 @@ class SelfAttention(nn.Module):
         # This is part of a workaround to get around fork/join parallelism not supporting Optional types.
         if key_padding_mask is not None and key_padding_mask.dim() == 0:
             key_padding_mask = None
-        assert key_padding_mask is None or key_padding_mask.size()[:2] == (bsz, src_len,)
+        assert key_padding_mask is None or key_padding_mask.size()[:2] == (bsz, src_len,), f"{key_padding_mask.size()}"
 
         if key_padding_mask is not None:  # don't attend to padding symbols
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
@@ -1016,7 +1016,7 @@ class BartModel(PretrainedBartModel):
                 hidden_states=encoder_outputs[1] if len(encoder_outputs) > 1 else None,
                 attentions=encoder_outputs[2] if len(encoder_outputs) > 2 else None,
             )
-        print(f"Encoder outputs shape before decoder: {encoder_outputs[0].shape}")
+
         # decoder outputs consists of (dec_features, layer_state, dec_hidden, dec_attn)
         decoder_outputs = self.decoder(
             decoder_input_ids,
