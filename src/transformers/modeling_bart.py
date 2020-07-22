@@ -1016,7 +1016,7 @@ class BartModel(PretrainedBartModel):
                 hidden_states=encoder_outputs[1] if len(encoder_outputs) > 1 else None,
                 attentions=encoder_outputs[2] if len(encoder_outputs) > 2 else None,
             )
-
+        print(f"Encoder outputs shape before decoder: {encoder_outputs[0].shape}")
         # decoder outputs consists of (dec_features, layer_state, dec_hidden, dec_attn)
         decoder_outputs = self.decoder(
             decoder_input_ids,
