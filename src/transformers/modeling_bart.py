@@ -1596,7 +1596,7 @@ class BartForSequenceOrdering(PretrainedBartModel):
                 attention_mask=attention_mask,
                 use_cache=True,
             )
-            outputs = model(**model_inputs)
+            outputs = self(**model_inputs)
             past = outputs.decoder_past_key_values
 
             predictions, predictions_attention_mask, remained_sequences, decoder_input_ids = self.get_predictions(
