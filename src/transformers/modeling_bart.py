@@ -1542,7 +1542,7 @@ class BartForSequenceOrdering(PretrainedBartModel):
         )
 
     def get_predictions(
-        self, logits, decoder_input_ids, decoder_step, finished_inputs, remained_sequences, decoder_input_ids
+        self, logits, decoder_input_ids, decoder_step, finished_inputs, remained_sequences,
     ):
         predictions_attention_mask = decoder_input_ids[:, decoder_step] == self.eos_token_id
         predictions_attention_mask = predictions_attention_mask.bitwise_and(~finished_inputs)
