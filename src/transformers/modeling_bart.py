@@ -814,9 +814,7 @@ class BartPointerHead(nn.Module):
             k = self._shape(k, -1, bsz)
 
         if saved_state is not None:
-            k, key_padding_mask = self._use_saved_state(
-                k, saved_state, key_padding_mask, static_kv, bsz
-            )
+            k, key_padding_mask = self._use_saved_state(k, saved_state, key_padding_mask, static_kv, bsz)
 
         # Update cache
         layer_state[self.cache_key] = {
@@ -836,7 +834,10 @@ class BartPointerHead(nn.Module):
         # This is part of a workaround to get around fork/join parallelism not supporting Optional types.
         if key_padding_mask is not None and key_padding_mask.dim() == 0:
             key_padding_mask = None
-        assert key_padding_mask is None or key_padding_mask.size()[:2] == (bsz, src_len,), f"key_padding_mask.size(): {key_padding_mask.size()}, (bsz, src_len,): {(bsz, src_len,)}" 
+        assert key_padding_mask is None or key_padding_mask.size()[:2] == (
+            bsz,
+            src_len,
+        ), f"key_padding_mask.size(): {key_padding_mask.size()}, (bsz, src_len,): {(bsz, src_len,)}"
 
         if key_padding_mask is not None:  # don't attend to padding symbols
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
@@ -1413,8 +1414,8 @@ class BartForSequenceOrdering(PretrainedBartModel):
             config.d_model, config.decoder_attention_heads, dropout=config.attention_dropout,
         )
         self.heads_combination = nn.Linear(config.decoder_attention_heads, 1)
-        self.max_num_sequences = config.max_num_sequences
         self.eos_token_id = config.eos_token_id
+        self.pad_token_id = config.pad_token_id
 
     def forward(
         self,
@@ -1457,7 +1458,9 @@ class BartForSequenceOrdering(PretrainedBartModel):
         else:
             decoder_sequence_attention_mask = (decoder_input_ids == self.eos_token_id).float()
 
-        sequence_attention_mask = torch.bmm(decoder_sequence_attention_mask.unsqueeze(2), encoder_sequence_attention_mask.unsqueeze(1))
+        sequence_attention_mask = torch.bmm(
+            decoder_sequence_attention_mask.unsqueeze(2), encoder_sequence_attention_mask.unsqueeze(1)
+        )
 
         heads_logits = self.pointer(
             query=encoder_sequence_last_hidden_state.transpose(1, 0),
@@ -1466,7 +1469,7 @@ class BartForSequenceOrdering(PretrainedBartModel):
 
         heads_logits = heads_logits.permute(0, 2, 3, 1)
         logits = self.heads_combination(heads_logits).squeeze(-1)
-        logits = logits.transpose(2, 1).contiguous() 
+        logits = logits.transpose(2, 1).contiguous()
         # logits: shape = (bsz, decoder_len, encoder_len), X_ij = probability of j to be the sentence after i
 
         assert sequence_attention_mask.size() == logits.size(), f"{sequence_attention_mask.size()}, {logits.size()}"
@@ -1477,7 +1480,7 @@ class BartForSequenceOrdering(PretrainedBartModel):
         if labels is not None:
             loss_fct = CrossEntropyLoss()
             loss = loss_fct(logits.view(-1, logits.size(-1)), labels.view(-1))
-            
+
         if return_tuple:
             output = (logits,) + outputs[1:]
             return ((loss,) + output) if loss is not None else output
@@ -1493,6 +1496,129 @@ class BartForSequenceOrdering(PretrainedBartModel):
             encoder_hidden_states=outputs.encoder_hidden_states,
             encoder_attentions=outputs.encoder_attentions,
         )
+
+    def prepare_inputs_for_generation(self, decoder_input_ids, past, input_ids, attention_mask, use_cache, **kwargs):
+        assert past is not None, "past has to be defined for encoder_outputs"
+
+        encoder_outputs, decoder_past_key_values = past
+        return {
+            "input_ids": input_ids,  # input_ids is needed for sequence mask
+            "encoder_outputs": encoder_outputs,
+            "decoder_past_key_values": decoder_past_key_values,
+            "decoder_input_ids": decoder_input_ids,
+            "attention_mask": attention_mask,
+            "use_cache": use_cache,  # change this to avoid caching (presumably for debugging)
+        }
+
+    def get_encoder(self):
+        return self.model.encoder
+
+    def init_order_parameters(self, input_ids, decoder_first_sequence_ids):
+        batch_size = input_ids.size(0)
+        sequences_length = input_ids.size(1)
+
+        decoder_ids = decoder_first_sequence_ids + [-1] * (sequences_length - len(decoder_first_sequence_ids))
+        decoder_input_ids = torch.tensor(decoder_ids).repeat(batch_size, 1)
+
+        remained_sequences = [(elem == self.eos_token_id).nonzero().squeeze(-1).tolist() for elem in input_ids]
+        pred2range = [
+            {l[i]: (1, l[i] + 1) if i == 0 else (l[i - 1] + 1, l[i] + 1) for i in range(len(l))}
+            for l in remained_sequences
+        ]
+        pred2idx = [{x: i for i, x in enumerate(p)} for p in remained_sequences]
+        finished_inputs = torch.zeros((batch_size)).bool()
+
+        results = [[] for _ in range(batch_size)]
+
+        return (
+            batch_size,
+            sequences_length,
+            decoder_input_ids,
+            remained_sequences,
+            pred2range,
+            pred2idx,
+            finished_inputs,
+            results,
+        )
+
+    def get_predictions(
+        self, logits, decoder_input_ids, decoder_step, finished_inputs, remained_sequences, decoder_input_ids
+    ):
+        predictions_attention_mask = decoder_input_ids[:, decoder_step] == self.eos_token_id
+        predictions_attention_mask = predictions_attention_mask.bitwise_and(~finished_inputs)
+        predictions = logits.argsort(dim=-1, descending=True).squeeze(1)
+        predictions = [
+            next(x for x in p if x in r) if att == True else None
+            for att, p, r in zip(predictions_attention_mask, predictions.tolist(), remained_sequences)
+        ]
+        for p, r in zip(predictions, remained_sequences):
+            if p == None:
+                continue
+            else:
+                r.remove(p)
+        for b in range(decoder_input_ids.size(0)):
+            if len(remained_sequences[b]) == 0 and finished_inputs[b] == False:
+                finished_inputs[b] = True
+                predictions[b] = None
+                decoder_input_ids[b, decoder_step + 1 :] = self.pad_token_id
+        return predictions, predictions_attention_mask, remained_sequences, decoder_input_ids
+
+    @torch.no_grad()
+    def order(
+        self,
+        input_ids: torch.LongTensor,
+        attention_mask: Optional[torch.LongTensor] = None,
+        decoder_first_sequence_ids: Optional[List[int]] = [0, 2],
+        use_cache: Optional[bool] = None,
+    ):
+
+        encoder = self.get_encoder()
+        encoder_outputs = encoder(input_ids, attention_mask=attention_mask)
+
+        (
+            batch_size,
+            sequences_length,
+            decoder_input_ids,
+            remained_sequences,
+            pred2range,
+            pred2idx,
+            finished_inputs,
+            results,
+        ) = self.init_order_parameters(input_ids, decoder_first_sequence_ids)
+
+        past = (encoder_outputs, None)
+        for decoder_step in range(sequences_length):
+
+            model_inputs = self.prepare_inputs_for_generation(
+                decoder_input_ids=decoder_input_ids[:, : decoder_step + 1],
+                past=past,
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                use_cache=True,
+            )
+            outputs = model(**model_inputs)
+            past = outputs.decoder_past_key_values
+
+            predictions, predictions_attention_mask, remained_sequences, decoder_input_ids = self.get_predictions(
+                outputs.logits, decoder_input_ids, decoder_step, finished_inputs, remained_sequences
+            )
+
+            for b in range(batch_size):
+                prediction = predictions[b]
+                if prediction == None:
+                    continue
+                begin, end = pred2range[b][prediction]
+                new_sequence = input_ids[b][begin:end]
+                decoder_input_ids[b, decoder_step + 1 : decoder_step + 1 + len(new_sequence)] = torch.tensor(
+                    new_sequence
+                )
+                value = pred2idx[b][prediction]
+                results[b].append(value)
+
+                if finished_inputs.all() == True:
+                    return results
+
+        return results
 
 
 @add_start_docstrings(
