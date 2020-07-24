@@ -1559,7 +1559,6 @@ class BartForSequenceOrdering(PretrainedBartModel):
         for b in range(decoder_input_ids.size(0)):
             if len(remained_sequences[b]) == 0 and finished_inputs[b] == False:
                 finished_inputs[b] = True
-                #predictions[b] = None
                 decoder_input_ids[b, decoder_step + 1 :] = self.pad_token_id
         return predictions, predictions_attention_mask, remained_sequences, decoder_input_ids
 
@@ -1585,8 +1584,6 @@ class BartForSequenceOrdering(PretrainedBartModel):
             finished_inputs,
             results,
         ) = self.init_order_parameters(input_ids, decoder_first_sequence_ids)
-        print(pred2idx)
-        print(remained_sequences)
 
         past = (encoder_outputs, None)
         for decoder_step in range(sequences_length):
@@ -1616,12 +1613,8 @@ class BartForSequenceOrdering(PretrainedBartModel):
                 results[b].append(value)
 
                 if finished_inputs.all() == True:
-                    print("remained")
-                    print(remained_sequences)
                     return results
 
-        print("remained")
-        print(remained_sequences)
         return results
 
 
