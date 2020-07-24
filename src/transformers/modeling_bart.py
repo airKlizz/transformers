@@ -1526,7 +1526,7 @@ class BartForSequenceOrdering(PretrainedBartModel):
             for l in remained_sequences
         ]
         pred2idx = [{x: i for i, x in enumerate(p)} for p in remained_sequences]
-        finished_inputs = torch.zeros((batch_size)).bool()
+        finished_inputs = torch.zeros((batch_size), device=input_ids.device).bool()
 
         results = [[] for _ in range(batch_size)]
 
