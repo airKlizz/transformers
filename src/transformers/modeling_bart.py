@@ -1611,7 +1611,7 @@ class BartForSequenceOrdering(PretrainedBartModel):
                     continue
                 begin, end = pred2range[b][prediction]
                 new_sequence = input_ids[b][begin:end]
-                decoder_input_ids[b, decoder_step + 1 : decoder_step + 1 + len(new_sequence)] = new_sequence
+                decoder_input_ids[b, decoder_step + 1 : decoder_step + 1 + new_sequence.size(0)] = new_sequence[:decoder_input_ids.size(1)-(decoder_step+1)]
                 value = pred2idx[b][prediction]
                 results[b].append(value)
 
