@@ -1518,7 +1518,7 @@ class BartForSequenceOrdering(PretrainedBartModel):
         sequences_length = input_ids.size(1)
 
         decoder_ids = decoder_first_sequence_ids + [-1] * (sequences_length - len(decoder_first_sequence_ids))
-        decoder_input_ids = torch.tensor(decoder_ids).repeat(batch_size, 1)
+        decoder_input_ids = torch.tensor(decoder_ids, device=input_ids.device).repeat(batch_size, 1)
 
         remained_sequences = [(elem == self.eos_token_id).nonzero().squeeze(-1).tolist() for elem in input_ids]
         pred2range = [
