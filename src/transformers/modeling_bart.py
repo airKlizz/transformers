@@ -1545,6 +1545,9 @@ class BartForSequenceOrdering(PretrainedBartModel):
         self, logits, decoder_input_ids, decoder_step, finished_inputs, remained_sequences,
     ):
         predictions_attention_mask = decoder_input_ids[:, decoder_step] == self.eos_token_id
+        print("DEVICES")
+        print(predictions_attention_mask.device)
+        print(finished_inputs.device)
         predictions_attention_mask = predictions_attention_mask.bitwise_and(~finished_inputs)
         predictions = logits.argsort(dim=-1, descending=True).squeeze(1)
         predictions = [
