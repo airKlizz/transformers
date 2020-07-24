@@ -1615,8 +1615,12 @@ class BartForSequenceOrdering(PretrainedBartModel):
                 results[b].append(value)
 
                 if finished_inputs.all() == True:
+                    print("remained")
+                    print(remained_sequences)
                     return results
 
+        print("remained")
+        print(remained_sequences)
         return results
 
 
