@@ -1586,6 +1586,7 @@ class BartForSequenceOrdering(PretrainedBartModel):
             results,
         ) = self.init_order_parameters(input_ids, decoder_first_sequence_ids)
         print(pred2idx)
+        print(remained_sequences)
 
         past = (encoder_outputs, None)
         for decoder_step in range(sequences_length):
