@@ -56,7 +56,7 @@ class OrderingMixin:
             3- the batch is done.
         """
         # 1
-        scores[decoder_input_id != eos_token_id] = float("-inf")
+        scores[decoder_input_id != self.eos_token_id] = float("-inf")
         # 2
         scores[done] = float("-inf")
         # 3
