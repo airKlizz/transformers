@@ -39,6 +39,7 @@ from .file_utils import (
     is_torch_tpu_available,
 )
 from .generation_utils import GenerationMixin
+from .ordering_utils import OrderingMixin
 
 
 logger = logging.getLogger(__name__)
@@ -265,7 +266,7 @@ class ModuleUtilsMixin:
         return head_mask
 
 
-class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
+class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, OrderingMixin):
     r""" Base class for all models.
 
         :class:`~transformers.PreTrainedModel` takes care of storing the configuration of the models and handles methods for loading/downloading/saving models
