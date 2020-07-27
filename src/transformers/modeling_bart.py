@@ -1417,6 +1417,9 @@ class BartForSequenceOrdering(PretrainedBartModel):
         self.eos_token_id = config.eos_token_id
         self.pad_token_id = config.pad_token_id
 
+    def is_sequence_ordering_model(self):
+        return True
+
     def forward(
         self,
         input_ids,

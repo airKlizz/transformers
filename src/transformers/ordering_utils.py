@@ -29,6 +29,8 @@ class OrderingMixin:
     """
     A class contraining all of the functions supporting generation, to be used as a mixin in PreTrainedModel.
     """
+    def is_sequence_ordering_model(self):
+        return False
 
     def prepare_inputs_for_generation(self, input_ids, **kwargs):
         return {"input_ids": input_ids}
@@ -76,7 +78,7 @@ class OrderingMixin:
     ) -> torch.LongTensor:
 
         # We cannot order if the model does not have a LM head
-        if not isinstance(self, BartForSequenceOrdering):
+        if not self.is_sequence_ordering_model():
             raise AttributeError(
                 "You tried to order sequences with a model that does not support ordering."
                 "Please use BartForSequenceOrdering"
