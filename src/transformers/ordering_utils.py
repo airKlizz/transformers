@@ -46,7 +46,7 @@ class OrderingMixin:
             return False
         return True
 
-    def postprocess_next_token_scores(
+    def postprocess_next_sequence_scores(
         self, scores, decoder_input_id, done, ordered_sequences, batch_size, num_beams,
     ):
         """
@@ -228,7 +228,7 @@ class OrderingMixin:
             outputs = self(**model_inputs)
             next_sequence_logits = outputs.logits[:, -1, :]
 
-            scores = self.postprocess_next_token_scores(
+            scores = self.postprocess_next_sequence_scores(
                 scores=next_sequence_logits,
                 decoder_input_id=decoder_input_ids[:, decoder_step],
                 done=done,
@@ -243,7 +243,7 @@ class OrderingMixin:
 
             next_sequence = torch.argmax(scores, dim=-1)
             next_sequence_mask = ~((scores != float("-inf")).any(-1))
-            # ignore next token for token != eos (see self.postprocess_next_token_scores)
+            # ignore next token for token != eos (see self.postprocess_next_sequence_scores)
             next_sequence[next_sequence_mask] = -100
 
             for batch in range(batch_size):
@@ -341,7 +341,7 @@ class OrderingMixin:
 
             scores = F.log_softmax(next_token_logits, dim=-1)  # (batch_size * num_beams, vocab_size)
 
-            scores = self.postprocess_next_token_scores(
+            scores = self.postprocess_next_sequence_scores(
                 scores=scores,
                 input_ids=input_ids,
                 no_repeat_ngram_size=no_repeat_ngram_size,
