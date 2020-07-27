@@ -109,8 +109,8 @@ class OrderingMixin:
         effective_batch_mult = 1
 
         assert (
-            decoder_start_token_id is not None
-        ), "decoder_start_token_id has to be defined for encoder-decoder generation"
+            decoder_start_token_ids is not None
+        ), "decoder_start_token_ids has to be defined for encoder-decoder generation"
         assert hasattr(self, "get_encoder"), "{} should have a 'get_encoder' function defined".format(self)
         assert callable(self.get_encoder), "{} should be a method".format(self.get_encoder)
 
