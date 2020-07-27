@@ -274,9 +274,7 @@ class OrderingMixin:
                 break
 
         # get the sequence idx and add to results
-        print(ordered_sequences)
-        print(pred2idx)
-        results = [[pred2idx[pred] for pred in ordered_sequences[batch]] for batch in range(batch_size)]
+        results = [[pred2idx[batch][pred] for pred in ordered_sequences[batch]] for batch in range(batch_size)]
         return results
 
     def _order_beam_search(
