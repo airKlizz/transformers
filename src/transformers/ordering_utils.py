@@ -247,7 +247,7 @@ class OrderingMixin:
             next_sequence[next_sequence_mask] = -100
 
             for batch in range(batch_size):
-                prediction = next_sequence[batch]
+                prediction = int(next_sequence[batch])
                 # ignore next token
                 if prediction == -100:
                     continue
