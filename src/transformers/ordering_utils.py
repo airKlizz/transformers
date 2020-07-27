@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import logging
-from typing import Iterable, Optional, Tuple
+from typing import Iterable, List, Optional, Tuple
 
 import torch
 from torch import Tensor
