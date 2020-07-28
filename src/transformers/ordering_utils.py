@@ -126,6 +126,16 @@ class OrderingMixin:
         decoder_input_ids = torch.tensor(
             decoder_token_ids, dtype=torch.long, device=next(self.parameters()).device,
         ).repeat(effective_batch_size * num_beams, 1)
+        attention_mask = attention_mask.unsqueeze(1).expand(
+            batch_size, effective_batch_mult * num_beams, input_ids_len
+        )
+
+        decoder_token_ids = decoder_token_ids.contiguous().view(
+            effective_batch_size * num_beams, input_ids_len
+        )  # shape: (batch_size * num_return_sequences * num_beams, cur_len)
+        attention_mask = attention_mask.contiguous().view(
+            effective_batch_size * num_beams, input_ids_len
+        )  # shape: (batch_size * num_return_sequences * num_beams, cur_len)
 
         assert (
             batch_size == encoder_outputs[0].shape[0]
