@@ -342,7 +342,7 @@ class OrderingMixin:
             print(model_inputs["decoder_input_ids"].shape)
             print(model_inputs["attention_mask"].shape)
             print(model_inputs["input_ids"].shape)
-            print(model_inputs["encoder_outputs"].shape)
+            print(model_inputs["encoder_outputs"][0].shape)
 
             outputs = self(**model_inputs)  # (batch_size * num_beams, cur_len, sequence_length)
             next_token_logits = outputs.logits[:, -1, :]  # (batch_size * num_beams, sequence_length)
