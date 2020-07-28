@@ -400,6 +400,9 @@ class OrderingMixin:
 
             assert topk_next_scores.size() == topk_next_sequences.size() == (batch_size, 2 * num_beams)
 
+            print(topk_next_scores)
+            print(topk_next_sequences)
+
             # next batch beam content
             next_batch_beam = []
 
@@ -428,6 +431,10 @@ class OrderingMixin:
                     # get beam and token IDs
                     beam_id = beam_token_id // sequence_length
                     token_id = beam_token_id % sequence_length
+
+                    print(batch_idx)
+                    print(num_beams)
+                    print(beam_id)
 
                     effective_beam_id = batch_idx * num_beams + beam_id
 
