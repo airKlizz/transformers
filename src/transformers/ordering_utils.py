@@ -131,10 +131,10 @@ class OrderingMixin:
         )
 
         decoder_token_ids = decoder_token_ids.contiguous().view(
-            effective_batch_size * num_beams, input_ids_len
+            effective_batch_size * num_beams, sequence_length
         )  # shape: (batch_size * num_return_sequences * num_beams, cur_len)
         attention_mask = attention_mask.contiguous().view(
-            effective_batch_size * num_beams, input_ids_len
+            effective_batch_size * num_beams, sequence_length
         )  # shape: (batch_size * num_return_sequences * num_beams, cur_len)
 
         assert (
