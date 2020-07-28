@@ -419,7 +419,7 @@ class OrderingMixin:
 
                 # next tokens for this sentence
                 for beam_token_rank, (beam_token_id, beam_token_score) in enumerate(
-                    zip(topk_next_scores[batch_idx], topk_next_scores[batch_idx])
+                    zip(topk_next_sequences[batch_idx], topk_next_scores[batch_idx])
                 ):
 
                     # once all ordering possibilities have been explored
