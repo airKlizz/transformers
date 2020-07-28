@@ -127,7 +127,7 @@ class OrderingMixin:
             decoder_token_ids, dtype=torch.long, device=next(self.parameters()).device,
         ).repeat(effective_batch_size * num_beams, 1)
         attention_mask = attention_mask.unsqueeze(1).expand(
-            batch_size, effective_batch_mult * num_beams, input_ids_len
+            batch_size, effective_batch_mult * num_beams, sequence_length
         )
 
         decoder_token_ids = decoder_token_ids.contiguous().view(
