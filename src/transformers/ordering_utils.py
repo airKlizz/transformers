@@ -126,16 +126,22 @@ class OrderingMixin:
         decoder_input_ids = torch.tensor(
             decoder_token_ids, dtype=torch.long, device=next(self.parameters()).device,
         ).repeat(effective_batch_size * num_beams, 1)
+        input_ids = input_ids.unsqueeze(1).expand(
+            batch_size, effective_batch_mult * num_beams, sequence_length
+        )
         attention_mask = attention_mask.unsqueeze(1).expand(
             batch_size, effective_batch_mult * num_beams, sequence_length
         )
 
         decoder_input_ids = decoder_input_ids.contiguous().view(
             effective_batch_size * num_beams, sequence_length
-        )  # shape: (batch_size * num_return_sequences * num_beams, cur_len)
+        )  # shape: (batch_size * num_return_sequences * num_beams, sequence_length)
+        input_ids = input_ids.contiguous().view(
+            effective_batch_size * num_beams, sequence_length
+        )  # shape: (batch_size * num_return_sequences * num_beams, sequence_length)
         attention_mask = attention_mask.contiguous().view(
             effective_batch_size * num_beams, sequence_length
-        )  # shape: (batch_size * num_return_sequences * num_beams, cur_len)
+        )  # shape: (batch_size * num_return_sequences * num_beams, sequence_length)
 
         assert (
             batch_size == encoder_outputs[0].shape[0]
@@ -333,7 +339,7 @@ class OrderingMixin:
             model_inputs = self.prepare_inputs_for_generation(
                 decoder_input_ids=decoder_input_ids[:, : decoder_step + 1],
                 past=past,
-                input_ids=None,
+                input_ids=input_ids,
                 attention_mask=attention_mask,
                 use_cache=True,
             )
@@ -341,7 +347,7 @@ class OrderingMixin:
             print("model_inputs")
             print(model_inputs["decoder_input_ids"].shape)
             print(model_inputs["attention_mask"].shape)
-            print(model_inputs["input_ids"] == None)
+            print(model_inputs["input_ids"].shape)
             print(model_inputs["encoder_outputs"][0].shape)
 
             outputs = self(**model_inputs)  # (batch_size * num_beams, cur_len, sequence_length)
@@ -477,7 +483,7 @@ class OrderingMixin:
                     next_sequence_pred = beam_tokens[idx]
                     # get the next sequence ids from input_ids
                     begin, end = pred2range[batch_idx][next_sequence_pred]
-                    next_sequence_ids = input_ids[batch_idx][begin:end]
+                    next_sequence_ids = input_ids[idx][begin:end]
                     # add next_sequence_ids to the decoder_input_ids
                     decoder_input_ids[
                         idx, decoder_step + 1 : decoder_step + 1 + next_sequence_ids.size(0)
