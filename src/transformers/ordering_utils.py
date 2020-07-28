@@ -333,7 +333,7 @@ class OrderingMixin:
             model_inputs = self.prepare_inputs_for_generation(
                 decoder_input_ids=decoder_input_ids[:, : decoder_step + 1],
                 past=past,
-                input_ids=input_ids,
+                input_ids=None,
                 attention_mask=attention_mask,
                 use_cache=True,
             )
