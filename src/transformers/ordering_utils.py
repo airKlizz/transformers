@@ -341,7 +341,7 @@ class OrderingMixin:
             print("model_inputs")
             print(model_inputs["decoder_input_ids"].shape)
             print(model_inputs["attention_mask"].shape)
-            print(model_inputs["input_ids"].shape)
+            print(model_inputs["input_ids"] == None)
             print(model_inputs["encoder_outputs"][0].shape)
 
             outputs = self(**model_inputs)  # (batch_size * num_beams, cur_len, sequence_length)
