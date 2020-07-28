@@ -1516,7 +1516,7 @@ class BartForSequenceOrdering(PretrainedBartModel):
     def get_encoder(self):
         return self.model.encoder
 
-    
+
 @add_start_docstrings(
     """BART Model with a span classification head on top for extractive question-answering tasks like SQuAD (a linear layer on top of
     the hidden-states output to compute `span start logits` and `span end logits`). """,
