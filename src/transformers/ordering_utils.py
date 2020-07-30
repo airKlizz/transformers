@@ -494,12 +494,8 @@ class OrderingMixin:
                 if beam_new_sequence[idx] == False:
                     decoder_input_ids[idx, decoder_step + 1] = beam_tokens[idx]
                 else:
-                    next_sequence_pred = beam_tokens[idx]
+                    next_sequence_pred = int(beam_tokens[idx])
                     # get the next sequence ids from input_ids
-                    print(beam_tokens)
-                    print(idx)
-                    print(beam_tokens[idx])
-                    print(batch_idx, next_sequence_pred)
                     begin, end = pred2range[batch_idx][next_sequence_pred]
                     next_sequence_ids = input_ids[idx][begin:end]
                     # add next_sequence_ids to the decoder_input_ids
