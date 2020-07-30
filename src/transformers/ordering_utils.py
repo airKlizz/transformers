@@ -459,10 +459,15 @@ class OrderingMixin:
 
                     # get new_sequence.
                     # True if the token_id referes to a new sequence
-                    # False if the token_id is the next token of the sequence
-                    new_sequence = (
-                        next_scores.view(batch_size * num_beams, sequence_length)[effective_beam_id] != float("-inf")
-                    ).sum() != 1 and (token_id == 0)
+                    # False if not
+                    new_sequence = not (
+                        (
+                            next_scores.view(batch_size * num_beams, sequence_length)[effective_beam_id]
+                            != float("-inf")
+                        ).sum()
+                        == 1
+                        and token_id == 0
+                    )
 
                     # set token_id to the next token_id of the sequence if it is not a new_sequence
                     if not new_sequence:
