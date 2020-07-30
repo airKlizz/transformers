@@ -359,6 +359,8 @@ class OrderingMixin:
 
             scores = F.log_softmax(next_token_logits, dim=-1)  # (batch_size * num_beams, sequence_length)
 
+            print("scores: ", scores)
+
             scores = self.postprocess_next_sequence_scores(
                 scores=scores,
                 decoder_input_id=decoder_input_ids[:, decoder_step],
@@ -379,6 +381,8 @@ class OrderingMixin:
             assert scores.shape == (batch_size * num_beams, sequence_length,), "Shapes of scores: {} != {}".format(
                 scores.shape, (batch_size * num_beams, sequence_length)
             )
+
+            print("scores before next_scores: ", scores)
 
             # compute the next_scores for each beam.
             # the score is the mean of all sequences scores.
