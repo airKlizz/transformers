@@ -330,6 +330,8 @@ class OrderingMixin:
 
             print(f"\n\n--- Step: {decoder_step} ---")
             print(f"ordered sequences: {ordered_sequences}")
+            print(f"beam scores: {beam_scores}")
+            print(f"is done: {done}")
             print()
 
             model_inputs = self.prepare_inputs_for_generation(
@@ -342,7 +344,7 @@ class OrderingMixin:
 
             print("model_inputs")
             print(model_inputs["decoder_input_ids"].shape)
-            print(decoder_input_ids)
+            print(model_inputs["decoder_input_ids"])
             print(model_inputs["attention_mask"].shape)
             print(model_inputs["input_ids"].shape)
             print(model_inputs["encoder_outputs"][0].shape)
@@ -354,11 +356,7 @@ class OrderingMixin:
             if self._use_cache(outputs, use_cache):
                 past = outputs.decoder_past_key_values
 
-            print("next_token_logits: ", next_token_logits)
-
             scores = F.log_softmax(next_token_logits, dim=-1)  # (batch_size * num_beams, sequence_length)
-
-            print("scores: ", scores)
 
             scores = self.postprocess_next_sequence_scores(
                 scores=scores,
@@ -369,8 +367,6 @@ class OrderingMixin:
                 num_beams=num_beams,
             )
 
-            print("scores: ", scores)
-
             next_sequence_mask = ~((scores != float("-inf")).any(-1))
             # for each beam, set the score of the first token to the beam score
             # if there is no next sequence scores (i.e. not eos or beam done).
@@ -378,16 +374,11 @@ class OrderingMixin:
             for idx, score in enumerate(scores):
                 if not (score == float("-inf")).all():
                     continue
-                print("next_token_ids: ", decoder_input_ids[idx, decoder_step + 1])
-                print("idx: ", idx)
-                print("beam_scores: ", beam_scores)
                 scores[idx, 0] = beam_scores[idx]
 
             assert scores.shape == (batch_size * num_beams, sequence_length,), "Shapes of scores: {} != {}".format(
                 scores.shape, (batch_size * num_beams, sequence_length)
             )
-
-            print("scores before next_scores: ", scores)
 
             # compute the next_scores for each beam.
             # the score is the mean of all sequences scores.
@@ -399,9 +390,6 @@ class OrderingMixin:
                 beam_steps[:, None].expand_as(scores) + 1
             )  # (batch_size * num_beams, sequence_length)
 
-            print("beam_scores: ", beam_scores)
-            print("beam_steps: ", beam_steps)
-
             # re-organize to group the beam together (we are keeping top hypothesis accross beams)
             next_scores = next_scores.view(
                 batch_size, num_beams * sequence_length
@@ -411,16 +399,11 @@ class OrderingMixin:
             if beam_steps.sum() == 0:
                 next_scores.view(batch_size, num_beams, sequence_length)[:, 1:] += -1e9
 
-            print("next_scores view : ", next_scores)
-
             topk_next_scores, topk_next_sequences = torch.topk(
                 next_scores, 2 * num_beams, dim=1, largest=True, sorted=True
             )
 
             assert topk_next_scores.size() == topk_next_sequences.size() == (batch_size, 2 * num_beams)
-
-            print(topk_next_scores)
-            print(topk_next_sequences)
 
             # next batch beam content
             next_batch_beam = []
@@ -484,6 +467,8 @@ class OrderingMixin:
 
                 # Check if we are done so that we can save a pad step if all(done)
                 done[batch_idx] = done[batch_idx] or (len(remained_sequences[batch_idx]) == 0)
+                print(f"remained sequences: {remained_sequences}")
+                print(f"batch {batch_idx} is done? {done[batch_idx]}")
 
                 # update next beam content
                 assert len(next_sent_beam) == num_beams, "Beam should always be full"
@@ -494,8 +479,7 @@ class OrderingMixin:
             if done.all() == True:
                 break
 
-            print()
-            print("next_batch_beam: ", next_batch_beam)
+            print(f"Next batch beam: \n{next_batch_beam}")
 
             # sanity check / prepare next batch
             assert len(next_batch_beam) == batch_size * num_beams
@@ -510,8 +494,6 @@ class OrderingMixin:
             )
 
             # re-order according to the beam idx
-            print("remained_sequences: ", remained_sequences)
-            print("beam_idx: ", beam_idx)
             ordered_sequences = [ordered_sequences[i].copy() for i in beam_idx]
             remained_sequences = [remained_sequences[i].copy() for i in beam_idx]
 
@@ -522,12 +504,6 @@ class OrderingMixin:
                 if beam_new_sequence[idx] == False:
                     decoder_input_ids[idx, decoder_step + 1] = beam_tokens[idx]
                 else:
-                    print(" Re-order batch ")
-                    print("next_sequence_pred: ", int(beam_tokens[idx]))
-                    print("batch_idx: ", batch_idx)
-                    print("idx: ", idx)
-                    print("pred2range: ", pred2range)
-                    print("remained_sequences: ", remained_sequences)
                     next_sequence_pred = int(beam_tokens[idx])
                     # get the next sequence ids from input_ids
                     begin, end = pred2range[batch_idx][next_sequence_pred]
