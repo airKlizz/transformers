@@ -405,6 +405,10 @@ class OrderingMixin:
                     zip(topk_next_sequences[batch_idx], topk_next_scores[batch_idx])
                 ):
 
+                    # once the beam is full, don't add more tokens to it.
+                    if len(next_sent_beam) == num_beams:
+                        break
+
                     # once all ordering possibilities have been explored
                     # pad if bean is not full
                     if beam_token_score == float("-inf"):
@@ -440,10 +444,6 @@ class OrderingMixin:
 
                     # add next predicted token
                     next_sent_beam.append((beam_token_score, token_id, new_sequence, effective_beam_id))
-
-                    # once the beam for next step is full, don't add more tokens to it.
-                    if len(next_sent_beam) == num_beams:
-                        break
 
                 # update next beam content
                 assert len(next_sent_beam) == num_beams, f"Beam should always be full ({len(next_sent_beam)}/{num_beams})"
