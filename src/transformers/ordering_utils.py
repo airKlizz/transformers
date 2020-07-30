@@ -344,7 +344,7 @@ class OrderingMixin:
             
             print("model_inputs")
             print(model_inputs["decoder_input_ids"].shape)
-            print(model_inputs["decoder_input_ids"])
+            print(decoder_input_ids)
             print(model_inputs["attention_mask"].shape)
             print(model_inputs["input_ids"].shape)
             print(model_inputs["encoder_outputs"][0].shape)
@@ -374,15 +374,16 @@ class OrderingMixin:
             print("scores: ", scores)
 
             next_sequence_mask = ~((scores != float("-inf")).any(-1))
-            # for each beam, set the score of the next token of the sequence to the beam score
-            # if there is no next sequence scores (i.e. not eos or beam done)
+            # for each beam, set the score of the first token to the beam score
+            # if there is no next sequence scores (i.e. not eos or beam done).
+            # this is to compare beam scores after
             for idx, score in enumerate(scores):
                 if not (score == float("-inf")).all():
                     continue
                 print("next_token_ids: ", decoder_input_ids[idx, decoder_step + 1])
                 print("idx: ", idx)
                 print("beam_scores: ", beam_scores)
-                scores[idx, decoder_input_ids[idx, decoder_step + 1]] = beam_scores[idx]
+                scores[idx, 0] = beam_scores[idx]
 
             assert scores.shape == (batch_size * num_beams, sequence_length,), "Shapes of scores: {} != {}".format(
                 scores.shape, (batch_size * num_beams, sequence_length)
@@ -464,6 +465,11 @@ class OrderingMixin:
                     new_sequence = (
                         next_scores.view(batch_size * num_beams, sequence_length)[effective_beam_id] != float("-inf")
                     ).sum() != 1
+
+                    # set token_id to the next token_id of the sequence if it is not a new_sequence
+                    if not new_sequence:
+                        token_id = decoder_input_ids[effective_beam_id, decoder_step + 1]
+
 
                     print("new_sequence: ", new_sequence)
 
