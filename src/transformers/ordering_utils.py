@@ -507,7 +507,7 @@ class OrderingMixin:
                     decoder_input_ids[idx, decoder_step + 1] = beam_tokens[idx]
                 else:
                     print(" Re-order batch ")
-                    print("next_sequence_pred: ", int(beam_tokens[idx])
+                    print("next_sequence_pred: ", int(beam_tokens[idx]))
                     print("batch_idx: ", batch_idx)
                     print("idx: ", idx)
                     print("pred2range: ", pred2range)
