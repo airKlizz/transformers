@@ -500,7 +500,7 @@ class OrderingMixin:
 
         # find the best beam for each batch
         best_beam = beam_scores.view(batch_size, num_beams).argmax(-1)
-        ordered_sequences = [ordered_sequences[idx] for idx in (best_beam + torch.arange(0, batch_size) * num_beams)]
+        ordered_sequences = [ordered_sequences[idx] for idx in (best_beam + torch.arange(0, batch_size, device=best_beam.device) * num_beams)]
 
         # get the sequence idx and add to results
         results = [[pred2idx[batch][pred] for pred in ordered_sequences[batch]] for batch in range(batch_size)]
