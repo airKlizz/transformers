@@ -498,8 +498,8 @@ class OrderingMixin:
             # re-order according to the beam idx
             print("remained_sequences: ", remained_sequences)
             print("beam_idx: ", beam_idx)
-            ordered_sequences = [ordered_sequences[i] for i in beam_idx]
-            remained_sequences = [remained_sequences[i] for i in beam_idx]
+            ordered_sequences = [ordered_sequences[i].copy() for i in beam_idx]
+            remained_sequences = [remained_sequences[i].copy() for i in beam_idx]
 
             # re-order batch and update current length
             decoder_input_ids = decoder_input_ids[beam_idx, :]
