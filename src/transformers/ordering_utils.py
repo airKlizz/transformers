@@ -466,7 +466,7 @@ class OrderingMixin:
                         break
 
                 # Check if we are done so that we can save a pad step if all(done)
-                done[batch_idx] = done[batch_idx] or (len(remained_sequences[batch_idx]) == 0)
+                done[batch_idx] = done[batch_idx] or (len(remained_sequences[batch_idx * num_beams]) == 0)
                 print(f"remained sequences: {remained_sequences}")
                 print(f"batch {batch_idx} is done? {done[batch_idx]}")
 
