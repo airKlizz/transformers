@@ -428,15 +428,12 @@ class OrderingMixin:
                     beam_id = (beam_token_id // sequence_length).item()
                     token_id = (beam_token_id % sequence_length).item()
 
-                    print("batch_idx: ", batch_idx)
-                    print("beam_id: ", beam_id)
-                    print("token_id: ", token_id)
-
                     effective_beam_id = batch_idx * num_beams + beam_id
 
                     # if we are done with this sentence, add a pad token
                     if done[effective_beam_id]:
-                        next_sent_beam.append((0, self.pad_token_id, False, 0))  # pad the batch
+                        print(f"effective_beam_id {effective_beam_id} is done. Beam score = {beam_token_score}")
+                        next_sent_beam.append((beam_token_score, self.pad_token_id, False, effective_beam_id))  # pad the batch
                         continue
 
                     # get new_sequence.
@@ -454,8 +451,6 @@ class OrderingMixin:
                     # set token_id to the next token_id of the sequence if it is not a new_sequence
                     if not new_sequence:
                         token_id = decoder_input_ids[effective_beam_id, decoder_step + 1]
-
-                    print("new_sequence: ", new_sequence)
 
                     # add next predicted token
                     next_sent_beam.append((beam_token_score, token_id, new_sequence, effective_beam_id))
@@ -508,8 +503,6 @@ class OrderingMixin:
                     remained_sequences[idx].remove(next_sequence_pred)
                     # Check if the beam is done
                     done[idx] = done[idx] or len(remained_sequences[idx]) == 0
-                    print(f"remained sequences: {remained_sequences}")
-                    print(f"idx {idx} is done? {done[idx]}")
 
             decoder_step = decoder_step + 1
 
