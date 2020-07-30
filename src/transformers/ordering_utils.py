@@ -344,6 +344,7 @@ class OrderingMixin:
             
             print("model_inputs")
             print(model_inputs["decoder_input_ids"].shape)
+            print(model_inputs["decoder_input_ids"])
             print(model_inputs["attention_mask"].shape)
             print(model_inputs["input_ids"].shape)
             print(model_inputs["encoder_outputs"][0].shape)
@@ -378,6 +379,9 @@ class OrderingMixin:
             for idx, score in enumerate(scores):
                 if not (score == float("-inf")).all():
                     continue
+                print("next_token_ids: ", decoder_input_ids[idx, decoder_step + 1])
+                print("idx: ", idx)
+                print("beam_scores: ", beam_scores)
                 scores[idx, decoder_input_ids[idx, decoder_step + 1]] = beam_scores[idx]
 
             assert scores.shape == (batch_size * num_beams, sequence_length,), "Shapes of scores: {} != {}".format(
