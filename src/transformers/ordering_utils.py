@@ -324,7 +324,7 @@ class OrderingMixin:
         beam_scores = beam_scores.view(-1)  # shape (batch_size * num_beams,)
         # steps for each sentence in the beam
         beam_steps = torch.zeros((batch_size, num_beams), dtype=torch.float, device=input_ids.device)
-        beam_steps = beam_scores.view(-1)  # shape (batch_size * num_beams,)
+        beam_steps = beam_steps.view(-1)  # shape (batch_size * num_beams,)
 
         # cache compute states
         past = (encoder_outputs, None) if encoder_outputs is not None else None
