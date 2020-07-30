@@ -464,19 +464,10 @@ class OrderingMixin:
                     if len(next_sent_beam) == num_beams:
                         break
 
-                    # Check if we are done so that we can save a pad step if all(done)
-                    done[effective_beam_id] = done[effective_beam_id] or len(remained_sequences[effective_beam_id]) == 0
-                    print(f"remained sequences: {remained_sequences}")
-                    print(f"effective_beam_id {effective_beam_id} is done? {done[effective_beam_id]}")
-
                 # update next beam content
                 assert len(next_sent_beam) == num_beams, "Beam should always be full"
                 next_batch_beam.extend(next_sent_beam)
                 assert len(next_batch_beam) == num_beams * (batch_idx + 1), "We should have added num_beams each step"
-
-            # stop when we are done with each sentence
-            if done.all() == True:
-                break
 
             print(f"Next batch beam: \n{next_batch_beam}")
 
@@ -515,8 +506,16 @@ class OrderingMixin:
                     ordered_sequences[idx].append(next_sequence_pred)
                     # remove sequence from remained_sequences
                     remained_sequences[idx].remove(next_sequence_pred)
+                    # Check if the beam is done
+                    done[idx] = done[idx] or len(remained_sequences[idx]) == 0
+                    print(f"remained sequences: {remained_sequences}")
+                    print(f"idx {idx} is done? {done[idx]}")
 
             decoder_step = decoder_step + 1
+
+            # stop when we are done with each sentence
+            if done.all() == True:
+                break
 
             # re-order internal states
             if past is not None:
