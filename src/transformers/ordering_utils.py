@@ -402,9 +402,7 @@ class OrderingMixin:
             )  # (batch_size, num_beams * sequence_length)
 
             # make sure that only next sequences of the first beam are considered to avoid sampling the exact same sequences num_beams times
-            print("sum", beam_steps.sum())
             if beam_steps.sum() == 0:
-                print("AVOID SAMPLING")
                 next_scores.view(batch_size, num_beams, sequence_length)[:, 1:] += -1e9
 
 
@@ -508,6 +506,12 @@ class OrderingMixin:
                 if beam_new_sequence[idx] == False:
                     decoder_input_ids[idx, decoder_step + 1] = beam_tokens[idx]
                 else:
+                    print(" Re-order batch ")
+                    print("next_sequence_pred: ", int(beam_tokens[idx])
+                    print("batch_idx: ", batch_idx)
+                    print("idx: ", idx)
+                    print("pred2range: ", pred2range)
+                    print("remained_sequences: ", remained_sequences)
                     next_sequence_pred = int(beam_tokens[idx])
                     # get the next sequence ids from input_ids
                     begin, end = pred2range[batch_idx][next_sequence_pred]
