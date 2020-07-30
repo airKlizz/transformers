@@ -493,6 +493,7 @@ class OrderingMixin:
             )
 
             # re-order according to the beam idx
+            done = [done[i].copy() for i in beam_idx]
             ordered_sequences = [ordered_sequences[i].copy() for i in beam_idx]
             remained_sequences = [remained_sequences[i].copy() for i in beam_idx]
 
