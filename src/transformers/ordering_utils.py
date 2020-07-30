@@ -433,8 +433,8 @@ class OrderingMixin:
                         break
 
                     # get beam and token IDs
-                    beam_id = beam_token_id // sequence_length
-                    token_id = beam_token_id % sequence_length
+                    beam_id = (beam_token_id // sequence_length).item()
+                    token_id = (beam_token_id % sequence_length).item()
 
                     print("batch_idx: ", batch_idx)
                     print("beam_id: ", beam_id)
