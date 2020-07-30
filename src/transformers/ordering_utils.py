@@ -368,8 +368,6 @@ class OrderingMixin:
                 num_beams=num_beams,
             )
 
-            print("scores: ", scores)
-
             next_sequence_mask = ~((scores != float("-inf")).any(-1))
             # for each beam, set the score of the next token of the sequence to the beam score
             # if there is no next sequence scores (i.e. not eos or beam done)
@@ -382,8 +380,6 @@ class OrderingMixin:
                 scores.shape, (batch_size * num_beams, sequence_length)
             )
 
-            print("scores after : ", scores)
-
             # compute the next_scores for each beam.
             # the score is the mean of all sequences scores.
             # this does not follow the original beam search algorithm
@@ -394,7 +390,6 @@ class OrderingMixin:
 
             print("beam_scores: ", beam_scores)
             print("beam_steps: ", beam_steps)
-            print("next_scores after : ", next_scores)
 
             # re-organize to group the beam together (we are keeping top hypothesis accross beams)
             next_scores = next_scores.view(
@@ -441,9 +436,9 @@ class OrderingMixin:
                     beam_id = beam_token_id // sequence_length
                     token_id = beam_token_id % sequence_length
 
-                    print(batch_idx)
-                    print(num_beams)
-                    print(beam_id)
+                    print("batch_idx: ", batch_idx)
+                    print("beam_id: ", beam_id)
+                    print("token_id: ", token_id)
 
                     effective_beam_id = batch_idx * num_beams + beam_id
 
