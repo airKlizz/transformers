@@ -464,10 +464,10 @@ class OrderingMixin:
                     if len(next_sent_beam) == num_beams:
                         break
 
-                # Check if we are done so that we can save a pad step if all(done)
-                done[effective_beam_id] = done[effective_beam_id] or len(remained_sequences[effective_beam_id]) == 0
-                print(f"remained sequences: {remained_sequences}")
-                print(f"batch {batch_idx} is done? {done[batch_idx]}")
+                    # Check if we are done so that we can save a pad step if all(done)
+                    done[effective_beam_id] = done[effective_beam_id] or len(remained_sequences[effective_beam_id]) == 0
+                    print(f"remained sequences: {remained_sequences}")
+                    print(f"batch {batch_idx} is done? {done[batch_idx]}")
 
                 # update next beam content
                 assert len(next_sent_beam) == num_beams, "Beam should always be full"
