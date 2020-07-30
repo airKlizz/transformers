@@ -388,11 +388,12 @@ class OrderingMixin:
             # the score is the mean of all sequences scores.
             # this does not follow the original beam search algorithm
             # but it is to handle the issue that every beam does not have the same number of sentences.
-            next_scores = (scores + beam_steps[:, None].expand_as(scores) * beam_scores[:, None].expand_as(scores)) / (
+            next_scores = (scores + (beam_steps[:, None].expand_as(scores) * beam_scores[:, None].expand_as(scores))) / (
                 beam_steps[:, None].expand_as(scores) + 1
             )  # (batch_size * num_beams, sequence_length)
 
             print("beam_scores: ", beam_scores)
+            print("beam_steps: ", beam_steps)
             print("next_scores after : ", next_scores)
 
             # re-organize to group the beam together (we are keeping top hypothesis accross beams)
