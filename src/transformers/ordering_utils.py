@@ -328,6 +328,7 @@ class OrderingMixin:
 
         # cache compute states
         past = (encoder_outputs, None) if encoder_outputs is not None else None
+        print("Init past: ", past)
 
         decoder_step = 0
         while decoder_step < sequence_length:
@@ -355,7 +356,8 @@ class OrderingMixin:
 
             # if model has past, then set the past variable to speed up decoding
             if self._use_cache(outputs, use_cache):
-                past = (past[0], outputs.decoder_past_key_values)
+                past = outputs.decoder_past_key_values
+                print("update past: ", past)
 
             scores = F.log_softmax(next_token_logits, dim=-1)  # (batch_size * num_beams, sequence_length)
 
