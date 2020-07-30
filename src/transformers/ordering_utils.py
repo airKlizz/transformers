@@ -468,6 +468,9 @@ class OrderingMixin:
             if done.all() == True:
                 break
 
+            print()
+            print("next_batch_beam: ", next_batch_beam)
+
             # sanity check / prepare next batch
             assert len(next_batch_beam) == batch_size * num_beams
             beam_scores = beam_scores.new([x[0] for x in next_batch_beam])
