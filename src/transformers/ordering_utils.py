@@ -148,9 +148,7 @@ class OrderingMixin:
         decoder_input_ids = torch.tensor(
             decoder_token_ids, dtype=torch.long, device=next(self.parameters()).device,
         ).repeat(effective_batch_size * num_beams, 1)
-        input_ids = input_ids.unsqueeze(1).expand(
-            batch_size, effective_batch_mult * num_beams, sequence_length
-        )
+        input_ids = input_ids.unsqueeze(1).expand(batch_size, effective_batch_mult * num_beams, sequence_length)
         attention_mask = attention_mask.unsqueeze(1).expand(
             batch_size, effective_batch_mult * num_beams, sequence_length
         )
@@ -341,7 +339,7 @@ class OrderingMixin:
                 attention_mask=attention_mask,
                 use_cache=True,
             )
-            
+
             print("model_inputs")
             print(model_inputs["decoder_input_ids"].shape)
             print(decoder_input_ids)
@@ -395,11 +393,12 @@ class OrderingMixin:
             # the score is the mean of all sequences scores.
             # this does not follow the original beam search algorithm
             # but it is to handle the issue that every beam does not have the same number of sentences.
-            next_scores = (scores + (beam_steps[:, None].expand_as(scores) * beam_scores[:, None].expand_as(scores))) / (
+            next_scores = (
+                scores + (beam_steps[:, None].expand_as(scores) * beam_scores[:, None].expand_as(scores))
+            ) / (
                 beam_steps[:, None].expand_as(scores) + 1
             )  # (batch_size * num_beams, sequence_length)
 
-            
             print("beam_scores: ", beam_scores)
             print("beam_steps: ", beam_steps)
 
@@ -411,7 +410,6 @@ class OrderingMixin:
             # make sure that only next sequences of the first beam are considered to avoid sampling the exact same sequences num_beams times
             if beam_steps.sum() == 0:
                 next_scores.view(batch_size, num_beams, sequence_length)[:, 1:] += -1e9
-
 
             print("next_scores view : ", next_scores)
 
@@ -464,12 +462,11 @@ class OrderingMixin:
                     # False if the token_id is the next token of the sequence
                     new_sequence = (
                         next_scores.view(batch_size * num_beams, sequence_length)[effective_beam_id] != float("-inf")
-                    ).sum() != 1
+                    ).sum() != 1 and (token_id == 0)
 
                     # set token_id to the next token_id of the sequence if it is not a new_sequence
                     if not new_sequence:
                         token_id = decoder_input_ids[effective_beam_id, decoder_step + 1]
-
 
                     print("new_sequence: ", new_sequence)
 
