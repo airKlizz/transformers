@@ -512,6 +512,7 @@ class OrderingMixin:
 
             # re-order internal states
             if past is not None:
+                print(past)
                 past = self._reorder_cache(past, beam_idx)
 
         # find the best beam for each batch
