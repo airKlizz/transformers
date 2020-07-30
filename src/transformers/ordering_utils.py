@@ -400,6 +400,8 @@ class OrderingMixin:
                 batch_size, num_beams * sequence_length
             )  # (batch_size, num_beams * sequence_length)
 
+            print("next_scores view : ", next_scores)
+
             topk_next_scores, topk_next_sequences = torch.topk(
                 next_scores, 2 * num_beams, dim=1, largest=True, sorted=True
             )
