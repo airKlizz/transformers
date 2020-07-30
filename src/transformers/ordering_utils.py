@@ -403,7 +403,8 @@ class OrderingMixin:
 
             # make sure that only next sequences of the first beam are considered to avoid sampling the exact same sequences num_beams times
             if beam_scores.sum() == 0:
-                next_scores.view(batch_size, num_beams, sequence_length)[:, 1:] = -1e9
+                print("AVOID SAMPLING")
+                next_scores.view(batch_size, num_beams, sequence_length)[:, 1:] += -1e9
 
 
             print("next_scores view : ", next_scores)
