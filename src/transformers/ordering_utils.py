@@ -319,8 +319,6 @@ class OrderingMixin:
 
         # scores for each sentence in the beam
         beam_scores = torch.ones((batch_size, num_beams), dtype=torch.float, device=input_ids.device)
-        # make sure that only tokens of the first beam are considered to avoid sampling the exact same tokens num_beams times
-        beam_scores[:, 1:] = -1e9
         beam_scores = beam_scores.view(-1)  # shape (batch_size * num_beams,)
         # steps for each sentence in the beam
         beam_steps = torch.zeros((batch_size, num_beams), dtype=torch.float, device=input_ids.device)
@@ -394,6 +392,7 @@ class OrderingMixin:
                 beam_steps[:, None].expand_as(scores) + 1
             )  # (batch_size * num_beams, sequence_length)
 
+            
             print("beam_scores: ", beam_scores)
             print("beam_steps: ", beam_steps)
 
@@ -401,6 +400,11 @@ class OrderingMixin:
             next_scores = next_scores.view(
                 batch_size, num_beams * sequence_length
             )  # (batch_size, num_beams * sequence_length)
+
+            # make sure that only next sequences of the first beam are considered to avoid sampling the exact same sequences num_beams times
+            if beam_scores.sum() == 0:
+                next_scores.view(batch_size, num_beams, sequence_length)[:, 1:] = -1e9
+
 
             print("next_scores view : ", next_scores)
 
