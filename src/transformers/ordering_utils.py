@@ -449,6 +449,8 @@ class OrderingMixin:
                         next_scores.view(batch_size * num_beams, sequence_length)[effective_beam_id] != float("-inf")
                     ).sum() == 1
 
+                    print("new_sequence: ", new_sequence)
+
                     # add next predicted token
                     next_sent_beam.append((beam_token_score, token_id, new_sequence, effective_beam_id))
 
