@@ -116,6 +116,31 @@ class OrderingMixin:
         assert hasattr(self, "get_encoder"), "{} should have a 'get_encoder' function defined".format(self)
         assert callable(self.get_encoder), "{} should be a method".format(self.get_encoder)
 
+        # done sentences
+        done = torch.zeros((batch_size), device=input_ids.device).bool()
+
+        # ordered_sequences
+        ordered_sequences = [[] for _ in range(batch_size)]
+
+        # remained sequences to order
+        remained_sequences = [(elem == self.eos_token_id).nonzero().squeeze(-1).tolist() for elem in input_ids]
+
+        # prediction to range in the input_ids
+        pred2range = [
+            {l[i]: (1, l[i] + 1) if i == 0 else (l[i - 1] + 1, l[i] + 1) for i in range(len(l))}
+            for l in remained_sequences
+        ]
+
+        # prediction to the idx of the sentence
+        pred2idx = [{x: i for i, x in enumerate(p)} for p in remained_sequences]
+
+        # expand ordered_sequences and remained_sequences
+        ordered_sequences = [l for l in ordered_sequences for _ in range(num_beams)]
+        print("NFCKSNCKAN")
+        print(remained_sequences)
+        remained_sequences = [l for l in remained_sequences for _ in range(num_beams)]
+        print(remained_sequences)
+
         # get encoder and store encoder outputs
         encoder = self.get_encoder()
 
@@ -160,31 +185,6 @@ class OrderingMixin:
             encoder_outputs[0].index_select(0, expanded_batch_idxs),
             *encoder_outputs[1:],
         )
-
-        # done sentences
-        done = torch.zeros((batch_size), device=input_ids.device).bool()
-
-        # ordered_sequences
-        ordered_sequences = [[] for _ in range(batch_size)]
-
-        # remained sequences to order
-        remained_sequences = [(elem == self.eos_token_id).nonzero().squeeze(-1).tolist() for elem in input_ids]
-
-        # prediction to range in the input_ids
-        pred2range = [
-            {l[i]: (1, l[i] + 1) if i == 0 else (l[i - 1] + 1, l[i] + 1) for i in range(len(l))}
-            for l in remained_sequences
-        ]
-
-        # prediction to the idx of the sentence
-        pred2idx = [{x: i for i, x in enumerate(p)} for p in remained_sequences]
-
-        # expand ordered_sequences and remained_sequences
-        ordered_sequences = [l for l in ordered_sequences for _ in range(num_beams)]
-        print("NFCKSNCKAN")
-        print(remained_sequences)
-        remained_sequences = [l for l in remained_sequences for _ in range(num_beams)]
-        print(remained_sequences)
 
         if num_beams > 1:
             output = self._order_beam_search(
