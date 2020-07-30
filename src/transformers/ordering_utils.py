@@ -327,12 +327,6 @@ class OrderingMixin:
         decoder_step = 0
         while decoder_step < sequence_length:
 
-            print(f"\n\n--- Step: {decoder_step} ---")
-            print(f"ordered sequences: {ordered_sequences}")
-            print(f"beam scores: {beam_scores}")
-            print(f"is done: {done}")
-            print()
-
             model_inputs = self.prepare_inputs_for_generation(
                 decoder_input_ids=decoder_input_ids[:, : decoder_step + 1],
                 past=past,
