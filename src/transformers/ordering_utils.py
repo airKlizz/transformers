@@ -327,12 +327,6 @@ class OrderingMixin:
         decoder_step = 0
         while decoder_step < sequence_length:
 
-            print(f"\n\n--- Step: {decoder_step} ---")
-            print(f"ordered sequences: {ordered_sequences}")
-            print(f"beam scores: {beam_scores}")
-            print(f"is done: {done}")
-            print()
-
             model_inputs = self.prepare_inputs_for_generation(
                 decoder_input_ids=decoder_input_ids[:, : decoder_step + 1],
                 past=past,
@@ -340,13 +334,6 @@ class OrderingMixin:
                 attention_mask=attention_mask,
                 use_cache=True,
             )
-
-            print("model_inputs")
-            print(model_inputs["decoder_input_ids"].shape)
-            print(model_inputs["decoder_input_ids"])
-            print(model_inputs["attention_mask"].shape)
-            print(model_inputs["input_ids"].shape)
-            print(model_inputs["encoder_outputs"][0].shape)
 
             outputs = self(**model_inputs)  # (batch_size * num_beams, cur_len, sequence_length)
             next_token_logits = outputs.logits[:, -1, :]  # (batch_size * num_beams, sequence_length)
@@ -432,7 +419,6 @@ class OrderingMixin:
 
                     # if we are done with this sentence, add a pad token
                     if done[effective_beam_id]:
-                        print(f"effective_beam_id {effective_beam_id} is done. Beam score = {beam_token_score}")
                         next_sent_beam.append((beam_token_score, self.pad_token_id, False, effective_beam_id))  # pad the batch
                         continue
 
@@ -463,8 +449,6 @@ class OrderingMixin:
                 assert len(next_sent_beam) == num_beams, "Beam should always be full"
                 next_batch_beam.extend(next_sent_beam)
                 assert len(next_batch_beam) == num_beams * (batch_idx + 1), "We should have added num_beams each step"
-
-            print(f"Next batch beam: \n{next_batch_beam}")
 
             # sanity check / prepare next batch
             assert len(next_batch_beam) == batch_size * num_beams
