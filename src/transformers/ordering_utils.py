@@ -135,8 +135,8 @@ class OrderingMixin:
         pred2idx = [{x: i for i, x in enumerate(p)} for p in remained_sequences]
 
         # expand ordered_sequences and remained_sequences
-        ordered_sequences = [l for l in ordered_sequences for _ in range(num_beams)]
-        remained_sequences = [l for l in remained_sequences for _ in range(num_beams)]
+        ordered_sequences = [l.copy() for l in ordered_sequences for _ in range(num_beams)]
+        remained_sequences = [l.copy() for l in remained_sequences for _ in range(num_beams)]
 
         # get encoder and store encoder outputs
         encoder = self.get_encoder()
