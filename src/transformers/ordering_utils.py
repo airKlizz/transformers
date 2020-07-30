@@ -328,7 +328,6 @@ class OrderingMixin:
 
         # cache compute states
         past = (encoder_outputs, None) if encoder_outputs is not None else None
-        print("Init past: ", past)
 
         decoder_step = 0
         while decoder_step < sequence_length:
@@ -357,7 +356,6 @@ class OrderingMixin:
             # if model has past, then set the past variable to speed up decoding
             if self._use_cache(outputs, use_cache):
                 past = outputs.decoder_past_key_values
-                print("update past: ", past)
 
             scores = F.log_softmax(next_token_logits, dim=-1)  # (batch_size * num_beams, sequence_length)
 
@@ -514,12 +512,6 @@ class OrderingMixin:
 
             # re-order internal states
             if past is not None:
-                print(type(past))
-                print(len(past))
-                print(type(past[0]))
-                print(type(past[1]))
-                print(len(past[0]))
-                print(len(past[1]))
                 past = self._reorder_cache(past, beam_idx)
 
         # find the best beam for each batch
@@ -529,7 +521,3 @@ class OrderingMixin:
         # get the sequence idx and add to results
         results = [[pred2idx[batch][pred] for pred in ordered_sequences[batch]] for batch in range(batch_size)]
         return results
-
-    @staticmethod
-    def _reorder_cache(past: Tuple, beam_idx: Tensor) -> Tuple[Tensor]:
-        return tuple(layer_past.index_select(1, beam_idx) for layer_past in past)

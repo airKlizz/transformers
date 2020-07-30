@@ -1513,6 +1513,23 @@ class BartForSequenceOrdering(PretrainedBartModel):
             "use_cache": use_cache,  # change this to avoid caching (presumably for debugging)
         }
 
+    @staticmethod
+    def _reorder_cache(past, beam_idx):
+        ((enc_out, enc_mask), decoder_past_key_values) = past
+        reordered_past = []
+        for layer_past in decoder_past_key_values:
+            # get the correct batch idx from decoder layer's batch dim for cross and self-attn
+            layer_past_new = {
+                attn_key: _reorder_buffer(attn_cache, beam_idx) for attn_key, attn_cache in layer_past.items()
+            }
+            reordered_past.append(layer_past_new)
+
+        new_enc_out = enc_out if enc_out is None else enc_out.index_select(0, beam_idx)
+        new_enc_mask = enc_mask if enc_mask is None else enc_mask.index_select(0, beam_idx)
+
+        past = ((new_enc_out, new_enc_mask), reordered_past)
+        return past
+
     def get_encoder(self):
         return self.model.encoder
 
