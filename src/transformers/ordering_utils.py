@@ -370,6 +370,8 @@ class OrderingMixin:
                 num_beams=num_beams,
             )
 
+            print("scores: ", scores)
+
             next_sequence_mask = ~((scores != float("-inf")).any(-1))
             # for each beam, set the score of the next token of the sequence to the beam score
             # if there is no next sequence scores (i.e. not eos or beam done)
