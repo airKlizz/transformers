@@ -408,7 +408,7 @@ class OrderingMixin:
                     # once all ordering possibilities have been explored
                     # pad if bean is not full
                     if beam_token_score == float("-inf"):
-                        next_sent_beam.extend([(0, self.pad_token_id, False, 0)] * (num_beams - len(next_sent_beam)))
+                        next_sent_beam.extend([(-1e9, self.pad_token_id, False, 0)] * (num_beams - len(next_sent_beam)))
                         break
 
                     # get beam and token IDs
@@ -446,7 +446,7 @@ class OrderingMixin:
                         break
 
                 # update next beam content
-                assert len(next_sent_beam) == num_beams, "Beam should always be full"
+                assert len(next_sent_beam) == num_beams, f"Beam should always be full ({len(next_sent_beam)}/{num_beams})"
                 next_batch_beam.extend(next_sent_beam)
                 assert len(next_batch_beam) == num_beams * (batch_idx + 1), "We should have added num_beams each step"
 
