@@ -497,6 +497,8 @@ class OrderingMixin:
                     next_sequence_pred = beam_tokens[idx]
                     # get the next sequence ids from input_ids
                     print(beam_tokens)
+                    print(idx)
+                    print(beam_tokens[idx])
                     print(batch_idx, next_sequence_pred)
                     begin, end = pred2range[batch_idx][next_sequence_pred]
                     next_sequence_ids = input_ids[idx][begin:end]
