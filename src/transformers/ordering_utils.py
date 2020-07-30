@@ -136,10 +136,7 @@ class OrderingMixin:
 
         # expand ordered_sequences and remained_sequences
         ordered_sequences = [l for l in ordered_sequences for _ in range(num_beams)]
-        print("NFCKSNCKAN")
-        print(remained_sequences)
         remained_sequences = [l for l in remained_sequences for _ in range(num_beams)]
-        print(remained_sequences)
 
         # get encoder and store encoder outputs
         encoder = self.get_encoder()
@@ -507,7 +504,7 @@ class OrderingMixin:
             # re-order batch and update current length
             decoder_input_ids = decoder_input_ids[beam_idx, :]
             for idx in range(batch_size * num_beams):
-                batch_idx = idx % num_beams
+                batch_idx = idx // num_beams
                 if beam_new_sequence[idx] == False:
                     decoder_input_ids[idx, decoder_step + 1] = beam_tokens[idx]
                 else:
