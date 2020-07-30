@@ -59,8 +59,7 @@ class OrderingMixin:
         # 1
         scores[decoder_input_id != self.eos_token_id] = float("-inf")
         # 2
-        expanded_batch_idxs = torch.arange(batch_size).view(-1, 1).repeat(1, num_beams).view(-1).to(scores.device)
-        scores[done[expanded_batch_idxs]] = float("-inf")
+        scores[done] = float("-inf")
         # 3
         for idx in range(batch_size * num_beams):
             for sequence in ordered_sequences[idx]:
@@ -117,7 +116,7 @@ class OrderingMixin:
         assert callable(self.get_encoder), "{} should be a method".format(self.get_encoder)
 
         # done sentences
-        done = torch.zeros((batch_size), device=input_ids.device).bool()
+        done = torch.zeros((batch_size * num_beams), device=input_ids.device).bool()
 
         # ordered_sequences
         ordered_sequences = [[] for _ in range(batch_size)]
@@ -411,11 +410,6 @@ class OrderingMixin:
             # for each sentence
             for batch_idx in range(batch_size):
 
-                # if we are done with this sentence, add a pad token
-                if done[batch_idx]:
-                    next_batch_beam.extend([(0, self.pad_token_id, False, 0)] * num_beams)  # pad the batch
-                    continue
-
                 # next sentence beam content, this will get added to next_batch_beam
                 next_sent_beam = []
 
@@ -439,6 +433,11 @@ class OrderingMixin:
                     print("token_id: ", token_id)
 
                     effective_beam_id = batch_idx * num_beams + beam_id
+
+                    # if we are done with this sentence, add a pad token
+                    if done[effective_beam_id]:
+                        next_sent_beam.append((0, self.pad_token_id, False, 0))  # pad the batch
+                        continue
 
                     # get new_sequence.
                     # True if the token_id referes to a new sequence
@@ -466,7 +465,7 @@ class OrderingMixin:
                         break
 
                 # Check if we are done so that we can save a pad step if all(done)
-                done[batch_idx] = done[batch_idx] or (len(remained_sequences[batch_idx * num_beams]) == 0)
+                done[effective_beam_id] = done[effective_beam_id] or len(remained_sequences[effective_beam_id]) == 0
                 print(f"remained sequences: {remained_sequences}")
                 print(f"batch {batch_idx} is done? {done[batch_idx]}")
 
