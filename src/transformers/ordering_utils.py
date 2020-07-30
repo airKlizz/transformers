@@ -376,8 +376,7 @@ class OrderingMixin:
             for idx, score in enumerate(scores):
                 if not (score == float("-inf")).all():
                     continue
-                score = score.new([0 for _ in range(sequence_length)])
-                score[decoder_input_ids[idx, decoder_step + 1]] = beam_scores[idx]
+                scores[idx, decoder_input_ids[idx, decoder_step + 1]] = beam_scores[idx]
 
             assert scores.shape == (batch_size * num_beams, sequence_length,), "Shapes of scores: {} != {}".format(
                 scores.shape, (batch_size * num_beams, sequence_length)
