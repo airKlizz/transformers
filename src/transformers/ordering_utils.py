@@ -122,7 +122,7 @@ class OrderingMixin:
         ordered_sequences = [[] for _ in range(batch_size)]
 
         # remained sequences to order
-        remained_sequences = [(elem == self.eos_token_id).nonzero().squeeze(-1).tolist() for elem in input_ids]
+        remained_sequences = [torch.nonzero(elem == self.eos_token_id).squeeze(-1).tolist() for elem in input_ids]
 
         # prediction to range in the input_ids
         pred2range = [
