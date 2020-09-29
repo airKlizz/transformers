@@ -1389,8 +1389,8 @@ class BartForSequenceOrdering(PretrainedBartModel):
         )
 
         logits = self.pointer(
-            query=encoder_sequence_last_hidden_state.transpose(1, 0),
-            key=decoder_sequence_last_hidden_state.transpose(1, 0),
+            query=decoder_sequence_last_hidden_state.transpose(1, 0),
+            key=encoder_sequence_last_hidden_state.transpose(1, 0),
         )
         # logits: shape = (bsz, decoder_len, encoder_len), X_ij = probability of j to be the sentence after i
 
