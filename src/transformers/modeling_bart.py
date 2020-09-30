@@ -766,7 +766,6 @@ class BartPointerHead(nn.Module):
 
         self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
         self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
-        self.cache_key = "encoder_decoder"
 
     def _shape(self, tensor, seq_len, bsz):
         return tensor.contiguous().view(seq_len, bsz, self.embed_dim).transpose(0, 1)
@@ -793,6 +792,101 @@ class BartPointerHead(nn.Module):
         attn_weights = torch.bmm(q, k.transpose(1, 2))
         assert attn_weights.size() == (bsz, tgt_len, src_len)
 
+        return attn_weights
+
+class BartDeepPointerHead(nn.Module):
+    """Head for pointer ordering task."""
+
+    def __init__(
+        self, embed_dim, num_layers=4, bias=False,
+    ):
+        super().__init__()
+        self.embed_dim = embed_dim
+        self.scaling = self.embed_dim ** -0.5
+
+        self.k_projs = []
+        self.q_projs = []
+        for _ in range(num_layers):
+            self.k_projs.append(nn.Linear(embed_dim, embed_dim, bias=bias))
+            self.q_projs.append(nn.Linear(embed_dim, embed_dim, bias=bias))
+
+    def _shape(self, tensor, seq_len, bsz):
+        return tensor.contiguous().view(seq_len, bsz, self.embed_dim).transpose(0, 1)
+
+    def forward(
+        self,
+        query,
+        key,
+    ) -> Tuple[Tensor, Optional[Tensor]]:
+        """Input shape: Time(SeqLen) x Batch x Channel"""
+
+        assert key is not None
+        assert query is not None
+        tgt_len, bsz, embed_dim = query.size()
+        assert embed_dim == self.embed_dim
+        assert list(query.size()) == [tgt_len, bsz, embed_dim]
+
+        q = query
+        k = key
+        for q_proj, k_proj in zip(self.q_projs, self.k_projs):
+            q = self.q_proj(q) 
+            k = self.k_proj(k)
+        q *= self.scaling
+
+        q = self._shape(q, tgt_len, bsz)
+        k = self._shape(k, -1, bsz)
+
+        src_len = k.size(1)
+        attn_weights = torch.bmm(q, k.transpose(1, 2))
+        assert attn_weights.size() == (bsz, tgt_len, src_len)
+
+        return attn_weights
+
+class BartMultiPointerHead(nn.Module):
+    """Head for pointer ordering task."""
+
+    def __init__(
+        self, embed_dim, num_ptr=4, bias=False,
+    ):
+        super().__init__()
+        self.embed_dim = embed_dim
+        self.num_ptr = num_ptr
+        self.scaling = self.embed_dim ** -0.5
+
+        self.k_proj = nn.Linear(embed_dim, num_ptr * embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, num_ptr * embed_dim, bias=bias)
+        self.out_proj = nn.Linear(num_ptr, 1, bias=bias)
+
+    def _shape(self, tensor, seq_len, bsz):
+        return tensor.contiguous().view(seq_len, bsz * self.num_ptr, self.embed_dim).transpose(0, 1)
+
+    def forward(
+        self,
+        query,
+        key,
+    ) -> Tuple[Tensor, Optional[Tensor]]:
+        """Input shape: Time(SeqLen) x Batch x Channel"""
+
+        assert query is not None
+        assert key is not None
+        tgt_len, bsz, embed_dim = query.size()
+        assert embed_dim == self.embed_dim
+        assert list(query.size()) == [tgt_len, bsz, embed_dim]
+
+        q = self.q_proj(query) * self.scaling
+        k = self.k_proj(key)
+
+        q = self._shape(q, tgt_len, bsz)
+        k = self._shape(k, -1, bsz)
+
+        
+        src_len = k.size(1)
+        attn_weights = torch.bmm(q, k.transpose(1, 2))
+        assert attn_weights.size() == (bsz * self.num_ptr, tgt_len, src_len)
+        attn_weigths = attn_weigths.view(bsz, self.num_ptr, tgt_len, src_len)
+        attn_weights = attn_weights.permute(0, 2, 3, 1)
+        attn_weights = self.out_proj(attn_weights).squeeze(-1)
+        
         return attn_weights
 
 class BartClassificationHead(nn.Module):
@@ -1335,6 +1429,254 @@ class BartForSequenceOrdering(PretrainedBartModel):
         super().__init__(config)
         self.model = BartModel(config)
         self.pointer = BartPointerHead(
+            config.d_model
+        )
+        self.eos_token_id = config.eos_token_id
+        self.pad_token_id = config.pad_token_id
+
+    def is_sequence_ordering_model(self):
+        return True
+
+    def forward(
+        self,
+        input_ids,
+        attention_mask=None,
+        encoder_outputs=None,
+        decoder_input_ids=None,
+        decoder_attention_mask=None,
+        decoder_past_key_values=None,
+        labels=None,
+        use_cache=None,
+        output_attentions=None,
+        output_hidden_states=None,
+        return_tuple=None,
+    ):
+        if labels is not None:
+            use_cache = False
+
+        outputs = self.model(
+            input_ids,
+            attention_mask=attention_mask,
+            decoder_input_ids=decoder_input_ids,
+            encoder_outputs=encoder_outputs,
+            decoder_attention_mask=decoder_attention_mask,
+            decoder_past_key_values=decoder_past_key_values,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_tuple=return_tuple,
+        )
+
+        use_cache = use_cache if use_cache is not None else self.config.use_cache
+
+        encoder_sequence_last_hidden_state = outputs.encoder_last_hidden_state
+        decoder_sequence_last_hidden_state = outputs.last_hidden_state
+
+        encoder_sequence_attention_mask = (input_ids == self.eos_token_id).float()
+        if use_cache:
+            decoder_sequence_attention_mask = (decoder_input_ids[:, -1:] == self.eos_token_id).float()
+        else:
+            decoder_sequence_attention_mask = (decoder_input_ids == self.eos_token_id).float()
+
+        sequence_attention_mask = torch.bmm(
+            decoder_sequence_attention_mask.unsqueeze(2), encoder_sequence_attention_mask.unsqueeze(1)
+        )
+
+        logits = self.pointer(
+            query=decoder_sequence_last_hidden_state.transpose(1, 0),
+            key=encoder_sequence_last_hidden_state.transpose(1, 0),
+        )
+        # logits: shape = (bsz, decoder_len, encoder_len), X_ij = probability of j to be the sentence after i
+
+        assert sequence_attention_mask.size() == logits.size(), f"{sequence_attention_mask.size()}, {logits.size()}"
+
+        logits[sequence_attention_mask == 0] = float("-inf")
+
+        loss = None
+        if labels is not None:
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(logits.view(-1, logits.size(-1)), labels.view(-1))
+
+        if return_tuple:
+            output = (logits,) + outputs[1:]
+            return ((loss,) + output) if loss is not None else output
+
+        return Seq2SeqOrderingOutput(
+            loss=loss,
+            logits=logits,
+            last_hidden_state=outputs.last_hidden_state,
+            decoder_past_key_values=outputs.decoder_past_key_values,
+            decoder_hidden_states=outputs.decoder_hidden_states,
+            decoder_attentions=outputs.decoder_attentions,
+            encoder_last_hidden_state=outputs.encoder_last_hidden_state,
+            encoder_hidden_states=outputs.encoder_hidden_states,
+            encoder_attentions=outputs.encoder_attentions,
+        )
+
+    def prepare_inputs_for_generation(self, decoder_input_ids, past, input_ids, attention_mask, use_cache, **kwargs):
+        assert past is not None, "past has to be defined for encoder_outputs"
+
+        encoder_outputs, decoder_past_key_values = past
+        return {
+            "input_ids": input_ids,  # input_ids is needed for sequence mask
+            "encoder_outputs": encoder_outputs,
+            "decoder_past_key_values": decoder_past_key_values,
+            "decoder_input_ids": decoder_input_ids,
+            "attention_mask": attention_mask,
+            "use_cache": use_cache,  # change this to avoid caching (presumably for debugging)
+        }
+
+    @staticmethod
+    def _reorder_cache(past, beam_idx):
+        ((enc_out, enc_mask), decoder_past_key_values) = past
+        reordered_past = []
+        for layer_past in decoder_past_key_values:
+            # get the correct batch idx from decoder layer's batch dim for cross and self-attn
+            layer_past_new = {
+                attn_key: _reorder_buffer(attn_cache, beam_idx) for attn_key, attn_cache in layer_past.items()
+            }
+            reordered_past.append(layer_past_new)
+
+        new_enc_out = enc_out if enc_out is None else enc_out.index_select(0, beam_idx)
+        new_enc_mask = enc_mask if enc_mask is None else enc_mask.index_select(0, beam_idx)
+
+        past = ((new_enc_out, new_enc_mask), reordered_past)
+        return past
+
+    def get_encoder(self):
+        return self.model.encoder
+
+class BartForSequenceOrderingWithMultiPointer(PretrainedBartModel):
+    base_model_prefix = "model"
+
+    def __init__(self, config: BartConfig):
+        super().__init__(config)
+        self.model = BartModel(config)
+        self.pointer = BartMultiPointerHead(
+            config.d_model
+        )
+        self.eos_token_id = config.eos_token_id
+        self.pad_token_id = config.pad_token_id
+
+    def is_sequence_ordering_model(self):
+        return True
+
+    def forward(
+        self,
+        input_ids,
+        attention_mask=None,
+        encoder_outputs=None,
+        decoder_input_ids=None,
+        decoder_attention_mask=None,
+        decoder_past_key_values=None,
+        labels=None,
+        use_cache=None,
+        output_attentions=None,
+        output_hidden_states=None,
+        return_tuple=None,
+    ):
+        if labels is not None:
+            use_cache = False
+
+        outputs = self.model(
+            input_ids,
+            attention_mask=attention_mask,
+            decoder_input_ids=decoder_input_ids,
+            encoder_outputs=encoder_outputs,
+            decoder_attention_mask=decoder_attention_mask,
+            decoder_past_key_values=decoder_past_key_values,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_tuple=return_tuple,
+        )
+
+        use_cache = use_cache if use_cache is not None else self.config.use_cache
+
+        encoder_sequence_last_hidden_state = outputs.encoder_last_hidden_state
+        decoder_sequence_last_hidden_state = outputs.last_hidden_state
+
+        encoder_sequence_attention_mask = (input_ids == self.eos_token_id).float()
+        if use_cache:
+            decoder_sequence_attention_mask = (decoder_input_ids[:, -1:] == self.eos_token_id).float()
+        else:
+            decoder_sequence_attention_mask = (decoder_input_ids == self.eos_token_id).float()
+
+        sequence_attention_mask = torch.bmm(
+            decoder_sequence_attention_mask.unsqueeze(2), encoder_sequence_attention_mask.unsqueeze(1)
+        )
+
+        logits = self.pointer(
+            query=decoder_sequence_last_hidden_state.transpose(1, 0),
+            key=encoder_sequence_last_hidden_state.transpose(1, 0),
+        )
+        # logits: shape = (bsz, decoder_len, encoder_len), X_ij = probability of j to be the sentence after i
+
+        assert sequence_attention_mask.size() == logits.size(), f"{sequence_attention_mask.size()}, {logits.size()}"
+
+        logits[sequence_attention_mask == 0] = float("-inf")
+
+        loss = None
+        if labels is not None:
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(logits.view(-1, logits.size(-1)), labels.view(-1))
+
+        if return_tuple:
+            output = (logits,) + outputs[1:]
+            return ((loss,) + output) if loss is not None else output
+
+        return Seq2SeqOrderingOutput(
+            loss=loss,
+            logits=logits,
+            last_hidden_state=outputs.last_hidden_state,
+            decoder_past_key_values=outputs.decoder_past_key_values,
+            decoder_hidden_states=outputs.decoder_hidden_states,
+            decoder_attentions=outputs.decoder_attentions,
+            encoder_last_hidden_state=outputs.encoder_last_hidden_state,
+            encoder_hidden_states=outputs.encoder_hidden_states,
+            encoder_attentions=outputs.encoder_attentions,
+        )
+
+    def prepare_inputs_for_generation(self, decoder_input_ids, past, input_ids, attention_mask, use_cache, **kwargs):
+        assert past is not None, "past has to be defined for encoder_outputs"
+
+        encoder_outputs, decoder_past_key_values = past
+        return {
+            "input_ids": input_ids,  # input_ids is needed for sequence mask
+            "encoder_outputs": encoder_outputs,
+            "decoder_past_key_values": decoder_past_key_values,
+            "decoder_input_ids": decoder_input_ids,
+            "attention_mask": attention_mask,
+            "use_cache": use_cache,  # change this to avoid caching (presumably for debugging)
+        }
+
+    @staticmethod
+    def _reorder_cache(past, beam_idx):
+        ((enc_out, enc_mask), decoder_past_key_values) = past
+        reordered_past = []
+        for layer_past in decoder_past_key_values:
+            # get the correct batch idx from decoder layer's batch dim for cross and self-attn
+            layer_past_new = {
+                attn_key: _reorder_buffer(attn_cache, beam_idx) for attn_key, attn_cache in layer_past.items()
+            }
+            reordered_past.append(layer_past_new)
+
+        new_enc_out = enc_out if enc_out is None else enc_out.index_select(0, beam_idx)
+        new_enc_mask = enc_mask if enc_mask is None else enc_mask.index_select(0, beam_idx)
+
+        past = ((new_enc_out, new_enc_mask), reordered_past)
+        return past
+
+    def get_encoder(self):
+        return self.model.encoder
+
+class BartForSequenceOrderingWithDeepPointer(PretrainedBartModel):
+    base_model_prefix = "model"
+
+    def __init__(self, config: BartConfig):
+        super().__init__(config)
+        self.model = BartModel(config)
+        self.pointer = BartDeepPointerHead(
             config.d_model
         )
         self.eos_token_id = config.eos_token_id
