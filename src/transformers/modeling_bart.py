@@ -829,8 +829,8 @@ class BartDeepPointerHead(nn.Module):
         q = query
         k = key
         for q_proj, k_proj in zip(self.q_projs, self.k_projs):
-            q = self.q_proj(q) 
-            k = self.k_proj(k)
+            q = q_proj(q) 
+            k = k_proj(k)
         q *= self.scaling
 
         q = self._shape(q, tgt_len, bsz)
@@ -883,7 +883,7 @@ class BartMultiPointerHead(nn.Module):
         src_len = k.size(1)
         attn_weights = torch.bmm(q, k.transpose(1, 2))
         assert attn_weights.size() == (bsz * self.num_ptr, tgt_len, src_len)
-        attn_weigths = attn_weigths.view(bsz, self.num_ptr, tgt_len, src_len)
+        attn_weights = attn_weights.view(bsz, self.num_ptr, tgt_len, src_len)
         attn_weights = attn_weights.permute(0, 2, 3, 1)
         attn_weights = self.out_proj(attn_weights).squeeze(-1)
         
