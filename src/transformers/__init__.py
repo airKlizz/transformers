@@ -292,6 +292,8 @@ if is_torch_available():
         BartForQuestionAnswering,
         BartForTokenOrdering,
         BartForSequenceOrdering,
+        BartForSequenceOrderingWithMultiPointer,
+        BartForSequenceOrderingWithDeepPointer
         BART_PRETRAINED_MODEL_ARCHIVE_LIST,
     )
     from .modeling_marian import MarianMTModel
