@@ -1737,12 +1737,6 @@ class BartForSequenceOrderingWithDeepPointer(PretrainedBartModel):
 
         assert sequence_attention_mask.size() == logits.size(), f"{sequence_attention_mask.size()}, {logits.size()}"
 
-        print(logits.device)
-        print(sequence_attention_mask.device)
-        print(logits.size())
-        print(sequence_attention_mask.size())
-        print(logits)
-        print(sequence_attention_mask)
         logits[sequence_attention_mask == 0] = float("-inf")
 
         loss = None
