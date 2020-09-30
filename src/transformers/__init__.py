@@ -293,7 +293,7 @@ if is_torch_available():
         BartForTokenOrdering,
         BartForSequenceOrdering,
         BartForSequenceOrderingWithMultiPointer,
-        BartForSequenceOrderingWithDeepPointer
+        BartForSequenceOrderingWithDeepPointer,
         BART_PRETRAINED_MODEL_ARCHIVE_LIST,
     )
     from .modeling_marian import MarianMTModel
