@@ -804,11 +804,8 @@ class BartDeepPointerHead(nn.Module):
         self.embed_dim = embed_dim
         self.scaling = self.embed_dim ** -0.5
 
-        self.k_projs = []
-        self.q_projs = []
-        for _ in range(num_layers):
-            self.k_projs.append(nn.Linear(embed_dim, embed_dim, bias=bias))
-            self.q_projs.append(nn.Linear(embed_dim, embed_dim, bias=bias))
+        self.k_projs = nn.ModuleList([nn.Linear(embed_dim, embed_dim, bias=bias) for i in range(num_layers)])
+        self.q_projs = nn.ModuleList([nn.Linear(embed_dim, embed_dim, bias=bias) for i in range(num_layers)])
 
     def _shape(self, tensor, seq_len, bsz):
         return tensor.contiguous().view(seq_len, bsz, self.embed_dim).transpose(0, 1)
@@ -828,10 +825,12 @@ class BartDeepPointerHead(nn.Module):
 
         q = query
         k = key
-        for q_proj, k_proj in zip(self.q_projs, self.k_projs):
-            q = q_proj(q) 
+        for k_proj in self.k_projs:
             k = k_proj(k)
-        q *= self.scaling
+        for q_proj in self.q_projs:
+            q = q_proj(q)
+            
+        q = q * self.scaling
 
         q = self._shape(q, tgt_len, bsz)
         k = self._shape(k, -1, bsz)
