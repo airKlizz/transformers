@@ -1620,7 +1620,7 @@ class BartForSequenceOrderingWithMultiPointer(PretrainedBartModel):
     def __init__(self, config: BartConfig):
         super().__init__(config)
         self.model = BartModel(config)
-        self.pointer = BartPointerHead(
+        self.pointer = BartMultiPointerHead(
             config.d_model, config.decoder_attention_heads, dropout=config.attention_dropout,
         )
         self.heads_combination = nn.Linear(config.decoder_attention_heads, 1)
