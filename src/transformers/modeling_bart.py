@@ -1614,7 +1614,7 @@ class BartForSequenceOrdering(PretrainedBartModel):
     def get_encoder(self):
         return self.model.encoder
 
-class BartForSequenceOrdering(PretrainedBartModel):
+class BartForSequenceOrderingWithMultiPointer(PretrainedBartModel):
     base_model_prefix = "model"
 
     def __init__(self, config: BartConfig):
