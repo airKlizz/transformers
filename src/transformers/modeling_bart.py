@@ -758,7 +758,7 @@ class BartPointerHead(nn.Module):
     """Head for pointer ordering task."""
 
     def __init__(
-        self, embed_dim, bias=False,
+        self, embed_dim, bias=True,
     ):
         super().__init__()
         self.embed_dim = embed_dim
@@ -798,7 +798,7 @@ class BartDeepPointerHead(nn.Module):
     """Head for pointer ordering task."""
 
     def __init__(
-        self, embed_dim, num_layers=4, bias=False,
+        self, embed_dim, num_layers=4, bias=True,
     ):
         super().__init__()
         self.embed_dim = embed_dim
